@@ -7,6 +7,8 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants;
 import frc.robot.lib.control.PIDVController;
 import frc.robot.lib.control.ProfiledPIDVController;
@@ -16,7 +18,7 @@ public class PIDHolonomicDriveController implements DriveController {
     private final PIDVController mXController;
     private final PIDVController mYController;
     private final ProfiledPIDVController mThetaController;
-    private double translationKa;
+    private double translationKA;
 
     private RedTrajectory trajectory;
     private Pose2d currentPose;
@@ -24,16 +26,22 @@ public class PIDHolonomicDriveController implements DriveController {
 
     private Timer mTimer = null;
 
-    public PIDHolonomicDriveController(PIDFConstants translationConstants, ProfiledPIDFConstants rotationConstants) {
-        mXController = new PIDVController(
-                translationConstants);
-        mYController = new PIDVController(
-                translationConstants);
+    static Field2d field = new Field2d();
+    static {
+		SmartDashboard.putData("debug", field);
+    }
+
+    public PIDHolonomicDriveController(PIDFConstants translationConstants, ProfiledPIDFConstants rotationConstants, double translationKA) {
+        mXController = new PIDVController(translationConstants);
+        mYController = new PIDVController(translationConstants);
 
         mThetaController = new ProfiledPIDVController(
                 rotationConstants);
                 
         mThetaController.enableContinuousInput(-Math.PI, Math.PI);
+
+        this.translationKA = translationKA;
+
         mTimer = new Timer();
     }
 
@@ -41,6 +49,7 @@ public class PIDHolonomicDriveController implements DriveController {
     public void setTrajectory(RedTrajectory trajectory) {
         this.trajectory = trajectory;
         mTimer.reset();
+        mTimer.start();
     }
 
     public void setRobotState(Pose2d pose, Twist2d speeds) {
@@ -58,7 +67,7 @@ public class PIDHolonomicDriveController implements DriveController {
             return new ChassisSpeeds();
         }
 
-        RedTrajectory.State targetState = trajectory.advance(translationKa);
+        RedTrajectory.State targetState = trajectory.advanceTo(mTimer.get());
 
         double vxFF = targetState.speeds.vxMetersPerSecond;
         double vyFF = targetState.speeds.vyMetersPerSecond;
@@ -76,33 +85,57 @@ public class PIDHolonomicDriveController implements DriveController {
         xAccelFF += -angularAccel * targetState.pose.getRotation().getSin();
         yAccelFF += angularAccel * targetState.pose.getRotation().getCos();
 
+        mXController.setTarget(targetState.pose.getX());
+        mYController.setTarget(targetState.pose.getY());
+
         mXController.setFeedforward(vxFF);
         mYController.setFeedforward(vyFF);
 
         mXController.setInput(new Pair<Double, Double>(currentPose.getX(), currentSpeeds.vxMetersPerSecond));
-        mXController.setInput(new Pair<Double, Double>(currentPose.getY(), currentSpeeds.vyMetersPerSecond));
+        mYController.setInput(new Pair<Double, Double>(currentPose.getY(), currentSpeeds.vyMetersPerSecond));
 
         double vx = mXController.getOutput();
         double vy = mYController.getOutput();
 
+        mThetaController.setTarget(targetState.pose.getRotation().getRadians());
         mThetaController.setFeedforward(targetState.speeds.omegaRadiansPerSecond);
         mThetaController.setInput(new Pair<Double, Double>(currentPose.getRotation().getRadians(), currentSpeeds.omegaRadiansPerSecond));
 
         double rotation = mThetaController.getOutput();
 
+        field.setRobotPose(targetState.pose);
+		SmartDashboard.putData("debug", field);
+
         return ChassisSpeeds.fromFieldRelativeSpeeds(
-                vx + xAccelFF * translationKa,
-                vy + yAccelFF * translationKa,
+                vx + xAccelFF * translationKA,
+                vy + yAccelFF * translationKA,
                 rotation,
                 currentPose.getRotation());
     }
 
     @Override
     public boolean isDone() {
-        if (trajectory == null || trajectory.getIsDone()) {
+        if (trajectory == null) return true;
+        if (trajectory.getIsDone()) {
             System.out.println("Done with trajectory, error: " + Math.hypot(mXController.error, mYController.error));
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void reset() {
+        mXController.reset();
+        mYController.reset();
+        mThetaController.reset();
+    
+        trajectory = null;
+        currentPose = null;
+        currentSpeeds = null;
+    
+        if (mTimer != null) {
+            mTimer.stop();
+            mTimer.reset();
+        }
     }
 }

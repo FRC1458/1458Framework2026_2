@@ -10,4 +10,5 @@ import frc.robot.lib.trajectory.RedTrajectory;
 public interface DriveController extends IO<Pair<Pose2d, Twist2d>, ChassisSpeeds> {
     public void setTrajectory(RedTrajectory trajectory);
     public boolean isDone();
+    public void reset();
 }

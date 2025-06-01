@@ -1,4 +1,4 @@
-package frc.robot.lib.util;
+package frc.robot.lib.localization;
 
 import java.io.IOException;
 
@@ -8,6 +8,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 
 /**
  * Contains various field dimensions and useful reference points. Dimensions are
@@ -26,6 +27,7 @@ import edu.wpi.first.math.util.Units;
  */
 public class FieldLayout {
 	//TODO: this must be tuned to the specific year's field
+	public static Field2d mField;
 	public static double kFieldLength = Units.inchesToMeters(651.223);
 	public static double kFieldWidth = Units.inchesToMeters(323.277);
 
@@ -35,6 +37,7 @@ public class FieldLayout {
 	static {
 		try {
 			APRILTAG_MAP = AprilTagFieldLayout.loadFromResource(AprilTagFields.kDefaultField.m_resourceFile);
+			mField = new Field2d();
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}

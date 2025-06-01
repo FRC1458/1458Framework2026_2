@@ -1,13 +1,25 @@
 package frc.robot;
 
+import static edu.wpi.first.units.Units.Meters;
+
+import java.io.IOException;
+
+import org.json.simple.parser.ParseException;
+
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.path.PathConstraints;
+
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.Units;
+import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.lib.control.ControlConstants.PIDFConstants;
 import frc.robot.lib.control.ControlConstants.ProfiledPIDFConstants;
+import frc.robot.lib.drivers.CanDeviceId;
 import frc.robot.lib.swerve.COTSTalonFXSwerveConstants;
 import frc.robot.lib.swerve.SwerveModuleConstants;
+import frc.robot.subsystems.vision.VisionDeviceConstants;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
@@ -20,6 +32,7 @@ import frc.robot.lib.swerve.SwerveModuleConstants;
 public final class Constants {
 	public static final double DT = 0.02;
 	public static final double K_EPSILON = 1e-6;
+	public static final double LONG_CANT_TIMEOUT_MS = 0;
 
 	public static final class Controllers {
 		public static final int DRIVER_CONTROLLER_PORT = 0;
@@ -35,18 +48,42 @@ public final class Constants {
         public static final double WHEEL_DIAMETER = SWERVE_MODULE_TYPE.wheelDiameter; 
 
         public static final Translation2d[] MODULE_LOCATIONS = {
-            new Translation2d(WHEEL_BASE / 2.0, TRACK_WIDTH / 2.0),
-            new Translation2d(WHEEL_BASE / 2.0, -TRACK_WIDTH / 2.0),
             new Translation2d(-WHEEL_BASE / 2.0, TRACK_WIDTH / 2.0),
-            new Translation2d(-WHEEL_BASE / 2.0, -TRACK_WIDTH / 2.0)
+            new Translation2d(WHEEL_BASE / 2.0, TRACK_WIDTH / 2.0),
+            new Translation2d(-WHEEL_BASE / 2.0, -TRACK_WIDTH / 2.0),
+            new Translation2d(WHEEL_BASE / 2.0, -TRACK_WIDTH / 2.0)
         };	
 		
+		public static final double DRIVE_GEAR_RATIO = SWERVE_MODULE_TYPE.driveGearRatio;
+        public static final double ANGLE_GEAR_RATIO = SWERVE_MODULE_TYPE.angleGearRatio;
+
 		public static final double MAX_SPEED = Units.MetersPerSecond.of(4.0).in(Units.MetersPerSecond);
 		public static final double MAX_ACCEL = Units.MetersPerSecondPerSecond.of(3.0).in(Units.MetersPerSecondPerSecond);
 		public static final double MAX_ROTATION_SPEED = Units.DegreesPerSecond.of(540.0).in(Units.RadiansPerSecond);
 		public static final double MAX_ROTATION_ACCEL = Units.DegreesPerSecondPerSecond.of(720.0).in(Units.RadiansPerSecondPerSecond);
-		
-		
+
+		public static final int ANGLE_CURRENT_LIMIT = 20;
+        public static final int ANGLE_CURRENT_THRESHOLD = 30;
+        public static final double ANGLE_CURRENT_THRESHOLD_TIME = 0.1;
+        public static final boolean ANGLE_ENABLE_CURRENT_LIMIT = true;
+
+        public static final int DRIVE_CURRENT_LIMIT = 30;
+        public static final int DRIVE_CURRENT_THRESHOLD = 45; 
+        public static final double DRIVE_CURRENT_THRESHOLD_TIME = 0.1;
+        public static final boolean DRIVE_ENABLE_CURRENT_LIMIT = true;
+
+        public static final double DRIVE_MOTOR_KV = 12 * Math.PI * WHEEL_DIAMETER / (DRIVE_GEAR_RATIO * MAX_SPEED);
+
+        public static final PIDFConstants ANGLE_MOTOR_PIDF_CONSTANTS = new PIDFConstants(
+            2.0, 0.0, 0.0, 0);
+        public static final PIDFConstants DRIVE_MOTOR_PIDF_CONSTANTS = new PIDFConstants(
+            1.2, 0.005, 0.0, DRIVE_MOTOR_KV);
+
+		public static final double OPEN_LOOP_RAMP = 0.25;
+		public static final double CLOSED_LOOP_RAMP = 0.0;
+
+		public static final boolean INVERT_GYRO = false;
+
 		public static final class Modules {
 			/* Module Specific Constants */
 			/* Front Left Module - Module 0 */
@@ -116,5 +153,65 @@ public final class Constants {
 				Drive.MAX_ACCEL
 			)
 		);
+	}
+
+	public static final class Limelight { //TODO: this must be tuned to specific robot
+        public static VisionDeviceConstants LEFT_VISION_DEVICE = new VisionDeviceConstants();
+        public static VisionDeviceConstants RIGHT_VISION_DEVICE = new VisionDeviceConstants();
+        public static VisionDeviceConstants FRONT_VISION_DEVICE = new VisionDeviceConstants();
+        public static VisionDeviceConstants BACK_VISION_DEVICE = new VisionDeviceConstants();
+
+        static {
+            LEFT_VISION_DEVICE.kTableName = "limelight-left";    
+            LEFT_VISION_DEVICE.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
+                    new Translation2d(Units.Inches.of(10.5), Units.Inches.of(1.23)),
+                    Rotation2d.fromDegrees(-90));
+
+            RIGHT_VISION_DEVICE.kTableName = "limelight-right";  
+            RIGHT_VISION_DEVICE.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
+                    new Translation2d(Units.Inches.of(10.78), Units.Inches.of(2)),
+                    Rotation2d.fromDegrees(90));
+            
+            FRONT_VISION_DEVICE.kTableName = "limelight-front";
+            FRONT_VISION_DEVICE.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
+                    new Translation2d(Units.Inches.of(11.11), Units.Inches.of(4.28)),
+                    Rotation2d.fromDegrees(0));
+
+            BACK_VISION_DEVICE.kTableName = "limelight-back";
+            BACK_VISION_DEVICE.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
+                    new Translation2d(Units.Inches.of(0), Units.Inches.of(-0.96)),
+                    Rotation2d.fromDegrees(180));
+        }
+
+    }
+
+	public static final class Ports {
+		public static final CanDeviceId FL_CANCODER = new CanDeviceId(7, "CV");
+	
+		public static final CanDeviceId FR_CANCODER = new CanDeviceId(6, "CV");
+	
+		public static final CanDeviceId BL_CANCODER = new CanDeviceId(14, "CV");
+	
+		public static final CanDeviceId BR_CANCODER = new CanDeviceId(1, "CV");
+	
+		public static final int PIGEON = 60; // TODO: this must be tuned to the specific robot
+		
+		public static final CanDeviceId LEDS = new CanDeviceId(21, "CV");
+	}	
+	
+	public static final class Pathplanner {
+		public static RobotConfig config;
+		static {
+			try {
+				config = RobotConfig.fromGUISettings();
+			} catch (Exception e) {
+				DriverStation.reportError("Pathplanner configs failed to load", e.getStackTrace());
+			}
+		}
+		public static final PathConstraints GLOBAL_CONSTRAINTS = 
+			new PathConstraints(Drive.MAX_SPEED, 
+								Drive.MAX_ACCEL, 
+								Drive.MAX_ROTATION_SPEED, 
+								Drive.MAX_ROTATION_ACCEL);
 	}
 }

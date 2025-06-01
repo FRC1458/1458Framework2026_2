@@ -3,6 +3,7 @@ package frc.robot.lib.control;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.lib.control.ControlConstants.*;
 
 public class PIDVController implements Controller<Pair<Double, Double>, Double> {
@@ -30,14 +31,12 @@ public class PIDVController implements Controller<Pair<Double, Double>, Double> 
         this(new PIDFConstants(constants));
     }
 
-    /** Enable wrapping so error is always the shortest path around a circular range */
     public void enableContinuousInput(double minInput, double maxInput) {
         isContinuous = true;
         minRange = minInput;
         maxRange = maxInput;
     }
 
-    /** Turn off continuous-input wrapping */
     public void disableContinuousInput() {
         isContinuous = false;
     }
@@ -81,5 +80,13 @@ public class PIDVController implements Controller<Pair<Double, Double>, Double> 
 
     public void setIntegral(double integral) {
         this.integral = integral;
+    }
+
+    public void reset() {
+        integral = 0.0;
+        feedforward = 0.0;
+        error = 0.0;
+        mDtTracker.reset();
+        mDtTracker.start();
     }
 }

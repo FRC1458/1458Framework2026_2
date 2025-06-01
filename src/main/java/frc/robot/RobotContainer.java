@@ -3,8 +3,16 @@ package frc.robot;
 import frc.robot.Constants.Controllers;
 import frc.robot.commands.Autos;
 import frc.robot.commands.ExampleCommand;
+import frc.robot.lib.util.interpolation.InterpolatingPose2d;
 import frc.robot.subsystems.ExampleSubsystem;
+import frc.robot.subsystems.drive.Drive;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 
@@ -17,6 +25,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 public class RobotContainer {
 	// The robot's subsystems and commands are defined here...
 	private final ExampleSubsystem mExampleSubsystem = new ExampleSubsystem();
+	private final Drive mDrive = Drive.getInstance();
 
 	// Replace with CommandPS4Controller or CommandJoystick if needed
 	private final CommandXboxController mController =
@@ -25,7 +34,8 @@ public class RobotContainer {
 	/** The container for the robot. Contains subsystems, OI devices, and commands. */
 	public RobotContainer() {
 		// Configure the trigger bindings
-		configureBindings();
+		RobotState.reset(Timer.getFPGATimestamp(), new InterpolatingPose2d());
+		RobotState.resetKalman();
 	}
 
 	/**
@@ -45,6 +55,22 @@ public class RobotContainer {
 		// Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
 		// cancelling on release.
 		mController.b().whileTrue(mExampleSubsystem.exampleMethodCommand());
+		mDrive.setDefaultCommand(
+			Commands.runOnce(
+				mDrive::setTeleop, mDrive)
+				.andThen(Commands.run(
+					() -> {
+						mDrive.setSpeedsFromJoystick(
+							mController.getLeftY(), 
+							mController.getLeftX(),
+							mController.getRightX()
+						);
+					}, mDrive
+				)
+			)
+		);
+		
+		mController.a().onTrue(mDrive.driveToPoseCommand(new Pose2d(5, 5, Rotation2d.fromDegrees(110))));
 	}
 
 	/**
@@ -54,6 +80,50 @@ public class RobotContainer {
 	 */
 	public Command getAutonomousCommand() {
 		// An example command will be run in autonomous
-		return Autos.exampleAuto(mExampleSubsystem);
+		return Autos.driveAuto(mDrive);
 	}
+
+	public void disabledInit() {
+
+	}
+
+    public void disabledPeriodic() {
+
+    }
+
+    public void autonomousInit() {
+
+    }
+
+    public void autonomousPeriodic() {
+
+    }
+
+    public void teleopInit() {
+		configureBindings();
+    }
+
+    public void teleopPeriodic() {
+
+    }
+
+    public void testInit() {
+
+    }
+
+    public void testPeriodic() {
+
+    }
+
+    public void simulationInit() {
+
+    }
+
+    public void simulationPeriodic() {
+
+    }
+
+    public void enabledInit() {
+
+    }
 }

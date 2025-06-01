@@ -76,4 +76,12 @@ public class ProfiledPIDVController implements Controller<Pair<Double, Double>, 
     public void setIntegral(double integral) {
         this.integral = integral;
     }
+
+    public void reset() {
+        integral = 0.0;
+        feedforward = 0.0;
+        error = 0.0;
+        mDtTracker.reset();
+        mDtTracker.start();
+    }
 }

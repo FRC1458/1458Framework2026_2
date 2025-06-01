@@ -12,7 +12,7 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 public class Robot extends TimedRobot {
 	private Command mAutoCommand;
 
-	private final RobotContainer m_robotContainer;
+	private final RobotContainer mRobotContainer;
 
 	/**
 	 * This function is run when the robot is first started up and should be used for any
@@ -21,7 +21,7 @@ public class Robot extends TimedRobot {
 	public Robot() {
 		// Instantiate our RobotContainer.  This will perform all our button bindings, and put our
 		// autonomous chooser on the dashboard.
-		m_robotContainer = new RobotContainer();
+		mRobotContainer = new RobotContainer();
 	}
 
 	/**
@@ -42,25 +42,34 @@ public class Robot extends TimedRobot {
 
 	/** This function is called once each time the robot enters Disabled mode. */
 	@Override
-	public void disabledInit() {}
+	public void disabledInit() {
+		mRobotContainer.disabledInit();
+	}
 
 	@Override
-	public void disabledPeriodic() {}
+	public void disabledPeriodic() {
+		mRobotContainer.disabledPeriodic();
+	}
 
 	/** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
 	@Override
 	public void autonomousInit() {
-		mAutoCommand = m_robotContainer.getAutonomousCommand();
+		mAutoCommand = mRobotContainer.getAutonomousCommand();
 
 		// schedule the autonomous command (example)
 		if (mAutoCommand != null) {
 			mAutoCommand.schedule();
 		}
+
+		mRobotContainer.enabledInit();
+		mRobotContainer.autonomousInit();
 	}
 
 	/** This function is called periodically during autonomous. */
 	@Override
-	public void autonomousPeriodic() {}
+	public void autonomousPeriodic() {
+		mRobotContainer.autonomousPeriodic();
+	}
 
 	@Override
 	public void teleopInit() {
@@ -71,27 +80,41 @@ public class Robot extends TimedRobot {
 		if (mAutoCommand != null) {
 			mAutoCommand.cancel();
 		}
+
+		mRobotContainer.enabledInit();
+		mRobotContainer.teleopInit();
 	}
 
 	/** This function is called periodically during operator control. */
 	@Override
-	public void teleopPeriodic() {}
+	public void teleopPeriodic() {
+		mRobotContainer.teleopPeriodic();
+	}
 
 	@Override
 	public void testInit() {
 		// Cancels all running commands at the start of test mode.
 		CommandScheduler.getInstance().cancelAll();
+
+		mRobotContainer.enabledInit();
+		mRobotContainer.testInit();
 	}
 
 	/** This function is called periodically during test mode. */
 	@Override
-	public void testPeriodic() {}
+	public void testPeriodic() {
+		mRobotContainer.testPeriodic();
+	}
 
 	/** This function is called once when the robot is first started up. */
 	@Override
-	public void simulationInit() {}
+	public void simulationInit() {
+		mRobotContainer.simulationInit();
+	}
 
 	/** This function is called periodically whilst in simulation. */
 	@Override
-	public void simulationPeriodic() {}
+	public void simulationPeriodic() {
+		mRobotContainer.simulationPeriodic();
+	}
 }

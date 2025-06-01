@@ -8,7 +8,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import frc.robot.Constants;
-import frc.robot.lib.util.FieldUtil;
+import frc.robot.lib.localization.FieldUtil;
 
 public class RedTrajectory {
     public TrajectoryType type;
@@ -159,9 +159,9 @@ public class RedTrajectory {
     public boolean getIsDone() {
         switch(type) {
             case PATHPLANNER:
-                return mPathplannerTrajectory.getTotalTimeSeconds() < progress;
+                return mPathplannerTrajectory.getTotalTimeSeconds() <= progress;
             case CHOREO:
-                return mChoreoTrajectory.getTotalTime() < progress;
+                return mChoreoTrajectory.getTotalTime() <= progress;
             default:
                 return true;
         }
