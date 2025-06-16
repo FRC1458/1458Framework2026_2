@@ -93,7 +93,6 @@ public class Drive extends IDrive {
     private final StructPublisher<ChassisSpeeds> chassisSpeedsPublisher = NetworkTableInstance.getDefault()
         .getStructTopic("SmartDashboard/Drive/ChassisSpeeds", ChassisSpeeds.struct).publish();
 
-        
     private Drive() {
         mCancoders = Cancoders.getInstance();
         mPeriodicIO = new PeriodicIO();
@@ -114,6 +113,7 @@ public class Drive extends IDrive {
         mDriveController = new PIDHolonomicDriveController(
             Constants.Auto.TRANSLATION_CONSTANTS, Constants.Auto.ROTATION_CONSTANTS, 0);
         mPathFinder = new LocalADStar();
+        SmartDashboard.putData(this);
     }
 
     /**

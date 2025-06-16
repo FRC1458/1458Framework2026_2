@@ -37,6 +37,10 @@ public class TrajectoryLoader {
                 break;
             case PATHPLANNER:
                 try {
+                    var other = PathPlannerPath.fromPathFile(fileName)
+                    .getIdealTrajectory(Constants.Pathplanner.config)
+                    .get();
+                    System.out.println(other);
                     return Optional.of(new RedTrajectory(PathPlannerPath.fromPathFile(fileName).getIdealTrajectory(Constants.Pathplanner.config).get(), true));
                 } catch (Exception e) {
                     DriverStation.reportError(fileName + " is not a valid trajectory!", e.getStackTrace());

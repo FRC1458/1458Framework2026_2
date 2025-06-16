@@ -16,7 +16,11 @@ public final class Autos {
 
 	/** An auto that runs a single test trajectory. */
 	public static Command driveAuto(Drive drive) {
-		RedTrajectory traj = TrajectoryLoader.loadAutoTrajectory(TrajectoryType.PATHPLANNER, "zisen").get();
-		return drive.trajectoryCommand(traj);
+		try {
+			RedTrajectory traj = TrajectoryLoader.loadAutoTrajectory(TrajectoryType.PATHPLANNER, "zisen").get();
+			return drive.trajectoryCommand(traj);
+		} catch(Exception e) {
+			return Commands.none();
+		}
 	}
 }

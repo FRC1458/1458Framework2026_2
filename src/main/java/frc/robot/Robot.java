@@ -1,9 +1,13 @@
 package frc.robot;
 
+import edu.wpi.first.hal.AllianceStationID;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.simulation.DriverStationSim;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -71,6 +75,7 @@ public class Robot extends TimedRobot {
 	/** This autonomous runs the autonomous command selected. */
 	@Override
 	public void autonomousInit() {
+		RobotState.setAlliance(DriverStation.getAlliance());
 		mAutoCommand = Autos.driveAuto(mDrive);
 
 		if (mAutoCommand != null) {
@@ -101,8 +106,8 @@ public class Robot extends TimedRobot {
 			.onTrue(new ExampleCommand(mExampleSubsystem));
 
 		mController.b().whileTrue(mExampleSubsystem.exampleMethodCommand());
-		mController.a().onTrue(mDrive.driveToPoseCommand(new Pose2d(5, 5, Rotation2d.fromDegrees(110))));
 		mDrive.setDefaultCommand(mDrive.teleopCommand(mController::getLeftY, mController::getLeftX, mController::getRightY));
+	
 	}
 
 	/** This function is called periodically during operator control. */
@@ -126,7 +131,7 @@ public class Robot extends TimedRobot {
 	/** This function is called once when the robot is first started up. */
 	@Override
 	public void simulationInit() {
-
+    	DriverStationSim.setAllianceStationId(AllianceStationID.Blue1);
 	}
 
 	/** This function is called periodically whilst in simulation. */

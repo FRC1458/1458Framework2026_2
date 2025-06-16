@@ -144,7 +144,7 @@ public class RedTrajectory {
     public PathPlannerTrajectory mPathplannerTrajectory;
 
     public double progress = 0.0;
-    public final boolean flipped;
+    public boolean flipped;
     public final String name;
 
     /**
@@ -154,8 +154,8 @@ public class RedTrajectory {
      */
     public RedTrajectory(Trajectory<SwerveSample> traj, boolean flipForAlliance) {
         mChoreoTrajectory = traj;
-        this.type = TrajectoryType.CHOREO;
-        this.flipped = flipForAlliance && (RobotState.getAlliance().get() == Alliance.Red);
+        this.type = TrajectoryType.CHOREO;        
+        this.flipped = flipForAlliance && RobotState.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
         this.name = "ChoreoTrajectory#" + traj.name();
     }
 
@@ -167,7 +167,7 @@ public class RedTrajectory {
     public RedTrajectory(PathPlannerTrajectory traj, boolean flipForAlliance) {
         mPathplannerTrajectory = traj;
         this.type = TrajectoryType.PATHPLANNER;
-        this.flipped = flipForAlliance && (RobotState.getAlliance().get() == Alliance.Red);
+        this.flipped = flipForAlliance && RobotState.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
         this.name = "PathPlannerTrajectory#" + traj.hashCode();
     }
 

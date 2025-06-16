@@ -78,6 +78,7 @@ public class SwerveModule extends SubsystemBase {
 		mSignals[1] = mDriveMotor.getRotorVelocity();
 		mSignals[2] = mAngleMotor.getRotorPosition();
 		mSignals[3] = mAngleMotor.getRotorVelocity();
+        SmartDashboard.putData(this);
     }
 
     /**
@@ -102,11 +103,6 @@ public class SwerveModule extends SubsystemBase {
                 Constants.Drive.DRIVE_GEAR_RATIO);
 
         mPeriodicIO.currentState = new SwerveModuleState(wheelSpeed, angleRotation);
-
-        SmartDashboard.putNumber(name + "/AngleDeg", angleRotation.getDegrees());
-        SmartDashboard.putNumber(name + "/WheelSpeedMPS", wheelSpeed);
-        SmartDashboard.putNumber(name + "/TargetAngleDeg", mPeriodicIO.targetState.angle.getDegrees());
-        SmartDashboard.putNumber(name + "/TargetSpeedMPS", mPeriodicIO.targetState.speedMetersPerSecond);
     }
 
     @Override
@@ -139,7 +135,9 @@ public class SwerveModule extends SubsystemBase {
             mAngleMotorSim.getAngularVelocity());
     }
 
-
+    /**
+     * Gets the current state of the module.
+     */
     public SwerveModuleState getState() {
         return mPeriodicIO.currentState;
     }
@@ -260,8 +258,10 @@ public class SwerveModule extends SubsystemBase {
 
     @Override
     public void initSendable(SendableBuilder builder) {
-        builder.addDoubleProperty("/Module#" + name + "/AngleDegrees", getModuleAngle()::getDegrees, null);
-        builder.addDoubleProperty("/Module#" + name + "/AngleSpeedDegreesPerSecond", this::getModuleAngleSpeed, null);
-        builder.addDoubleProperty("/Module#" + name + "/DriveSpeedMetersPerSecond", this::getDriveSpeed, null);
+        builder.addDoubleProperty("/AngleDegrees", this::getModuleAngleDegrees, null);
+        builder.addDoubleProperty("/AngleSpeedDegreesPerSecond", this::getModuleAngleSpeed, null);
+        builder.addDoubleProperty("/DriveSpeedMetersPerSecond", this::getDriveSpeed, null);
+        builder.addDoubleProperty("/TargetAngleDegrees", () -> mPeriodicIO.targetState.angle.getDegrees(), null);
+        builder.addDoubleProperty("/TargetDriveSpeedMetersPerSecond", () -> mPeriodicIO.targetState.speedMetersPerSecond, null);
     }
 }
