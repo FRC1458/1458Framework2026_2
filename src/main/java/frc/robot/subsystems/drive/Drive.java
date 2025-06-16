@@ -23,6 +23,7 @@ import edu.wpi.first.math.kinematics.*;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.networktables.StructPublisher;
+import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -82,15 +83,16 @@ public class Drive extends IDrive {
 
     private SlewRateLimiter mAccelLimiter;
     private SlewRateLimiter mRotationAccelLimiter;
-
+    
     private final StructArrayPublisher<SwerveModuleState> desiredStatesPublisher = NetworkTableInstance.getDefault()
-        .getStructArrayTopic("SmartDashboard/Drive/States_Desired", SwerveModuleState.struct).publish();
-	private final StructArrayPublisher<SwerveModuleState> measuredStatesPublisher = NetworkTableInstance.getDefault()
+    .getStructArrayTopic("SmartDashboard/Drive/States_Desired", SwerveModuleState.struct).publish();
+    private final StructArrayPublisher<SwerveModuleState> measuredStatesPublisher = NetworkTableInstance.getDefault()
         .getStructArrayTopic("SmartDashboard/Drive/States_Measured", SwerveModuleState.struct).publish();
     private final StructPublisher<Rotation2d> rotationPublisher = NetworkTableInstance.getDefault()
         .getStructTopic("SmartDashboard/Drive/Rotation", Rotation2d.struct).publish();
     private final StructPublisher<ChassisSpeeds> chassisSpeedsPublisher = NetworkTableInstance.getDefault()
         .getStructTopic("SmartDashboard/Drive/ChassisSpeeds", ChassisSpeeds.struct).publish();
+
         
     private Drive() {
         mCancoders = Cancoders.getInstance();
@@ -351,4 +353,11 @@ public class Drive extends IDrive {
 		}
 		return states.toArray(new SwerveModuleState[]{});
 	}
+
+    @Override
+    public void initSendable(SendableBuilder builder) {
+        builder.setSmartDashboardType("Subsystem");
+        builder.addStringProperty("/State", () -> mState.name(), null);
+        builder.addStringProperty("/Trajectory", () -> mState == State.PATH_FOLLOWING ? mDriveController.getTrajectory().name : "None", null);
+    }
 }

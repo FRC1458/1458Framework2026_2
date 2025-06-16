@@ -145,6 +145,7 @@ public class RedTrajectory {
 
     public double progress = 0.0;
     public final boolean flipped;
+    public final String name;
 
     /**
      * Creates a {@code RedTrajectory} from a Choreo trajectory. See {@link TrajectoryLoader}.
@@ -155,6 +156,7 @@ public class RedTrajectory {
         mChoreoTrajectory = traj;
         this.type = TrajectoryType.CHOREO;
         this.flipped = flipForAlliance && (RobotState.getAlliance().get() == Alliance.Red);
+        this.name = "ChoreoTrajectory#" + traj.name();
     }
 
     /**
@@ -166,6 +168,7 @@ public class RedTrajectory {
         mPathplannerTrajectory = traj;
         this.type = TrajectoryType.PATHPLANNER;
         this.flipped = flipForAlliance && (RobotState.getAlliance().get() == Alliance.Red);
+        this.name = "PathPlannerTrajectory#" + traj.hashCode();
     }
 
     /**

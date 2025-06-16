@@ -28,4 +28,9 @@ public interface DriveController extends IO<Pair<Pose2d, Twist2d>, ChassisSpeeds
      * Resets the drive controller.
      */
     public void reset();
+
+    /**
+     * Gets the current trajectory.
+     */
+    public RedTrajectory getTrajectory();
 }

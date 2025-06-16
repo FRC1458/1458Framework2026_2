@@ -179,7 +179,7 @@ public class WheelTracker {
 
 
 	private void updateWheelOdometry(SwerveModule module, WheelProperties props) {
-		double currentEncDistance = module.getDriveDistanceMeters();
+		double currentEncDistance = module.getDriveDistance();
 		double deltaEncDistance = currentEncDistance - props.previousEncDistance;
 		Rotation2d wheelAngle = module.getModuleAngle().rotateBy(Rotation2d.fromRadians(-robotHeading));
 		Translation2d deltaPosition = new Translation2d(wheelAngle.getCos() * deltaEncDistance,

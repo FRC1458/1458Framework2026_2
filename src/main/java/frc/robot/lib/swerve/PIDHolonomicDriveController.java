@@ -20,7 +20,7 @@ public class PIDHolonomicDriveController implements DriveController {
     private final ProfiledPIDVController mThetaController;
     private double translationKA;
 
-    private RedTrajectory trajectory;
+    private RedTrajectory mTrajectory;
     private Pose2d currentPose;
     private ChassisSpeeds currentSpeeds;
 
@@ -53,7 +53,7 @@ public class PIDHolonomicDriveController implements DriveController {
 
     @Override
     public void setTrajectory(RedTrajectory trajectory) {
-        this.trajectory = trajectory;
+        this.mTrajectory = trajectory;
         mTimer.reset();
         mTimer.start();
     }
@@ -69,11 +69,11 @@ public class PIDHolonomicDriveController implements DriveController {
 
     @Override
     public ChassisSpeeds getOutput() {
-        if (trajectory == null || currentPose == null || currentSpeeds == null || trajectory.isDone()) {
+        if (mTrajectory == null || currentPose == null || currentSpeeds == null || mTrajectory.isDone()) {
             return new ChassisSpeeds();
         }
 
-        RedTrajectory.State targetState = trajectory.advanceTo(mTimer.get());
+        RedTrajectory.State targetState = mTrajectory.advanceTo(mTimer.get());
 
         double vxFF = targetState.speeds.vxMetersPerSecond;
         double vyFF = targetState.speeds.vyMetersPerSecond;
@@ -121,8 +121,8 @@ public class PIDHolonomicDriveController implements DriveController {
 
     @Override
     public boolean isDone() {
-        if (trajectory == null) return true;
-        if (trajectory.isDone()) {
+        if (mTrajectory == null) return true;
+        if (mTrajectory.isDone()) {
             System.out.println("Done with trajectory, error: " + Math.hypot(mXController.error, mYController.error));
             return true;
         }
@@ -135,7 +135,7 @@ public class PIDHolonomicDriveController implements DriveController {
         mYController.reset();
         mThetaController.reset();
     
-        trajectory = null;
+        mTrajectory = null;
         currentPose = null;
         currentSpeeds = null;
     
@@ -143,5 +143,10 @@ public class PIDHolonomicDriveController implements DriveController {
             mTimer.stop();
             mTimer.reset();
         }
+    }
+
+    @Override
+    public RedTrajectory getTrajectory() {
+        return mTrajectory;
     }
 }

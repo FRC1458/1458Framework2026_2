@@ -13,6 +13,8 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
+import edu.wpi.first.units.Units;
+import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
@@ -20,12 +22,13 @@ import edu.wpi.first.wpilibj.simulation.EncoderSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import frc.robot.Robot;
 import frc.robot.lib.drivers.TalonFXManager;
 import frc.robot.lib.swerve.SwerveModuleConstants;
 import frc.robot.lib.util.Conversions;
 
 public class SwerveModule extends SubsystemBase {
-    private final String name;
+    public final String name;
     private final SwerveModuleConstants mConstants;
 	private BaseStatusSignal[] mSignals = new BaseStatusSignal[4];
 
@@ -50,6 +53,7 @@ public class SwerveModule extends SubsystemBase {
     
     private DCMotorSim mAngleMotorSim;
     private DCMotorSim mDriveMotorSim;
+
 
     public SwerveModule(String moduleName, SwerveModuleConstants constants, CANcoder canCoder) {
         name = moduleName;
@@ -110,7 +114,6 @@ public class SwerveModule extends SubsystemBase {
         TalonFXSimState mDriveMotorSimState = mDriveMotor.getSimState();
         TalonFXSimState mAngleMotorSimState = mAngleMotor.getSimState();
         CANcoderSimState angleEncoderSimState = mCanCoder.getSimState();
-
         double batteryVoltage = RobotController.getBatteryVoltage();
         mDriveMotorSimState.setSupplyVoltage(batteryVoltage);
         mAngleMotorSimState.setSupplyVoltage(batteryVoltage);
@@ -131,9 +134,9 @@ public class SwerveModule extends SubsystemBase {
             mAngleMotorSim.getAngularVelocity().times(Constants.Drive.ANGLE_GEAR_RATIO));
 
         angleEncoderSimState.setRawPosition(
-            mAngleMotorSim.getAngularPosition());//.times(Constants.Drive.ANGLE_GEAR_RATIO));
+            mAngleMotorSim.getAngularPosition());
         angleEncoderSimState.setVelocity(
-            mAngleMotorSim.getAngularVelocity());//.times(Constants.Drive.ANGLE_GEAR_RATIO));
+            mAngleMotorSim.getAngularVelocity());
     }
 
 
@@ -207,14 +210,45 @@ public class SwerveModule extends SubsystemBase {
 
     /**
      * Gets the distance the drive wheel has traversed.
-     * @return The distance, in meters.s
+     * @return The distance, in meters.
      */
-    public double getDriveDistanceMeters() {
+    public double getDriveDistance() {
 		return Conversions.rotationsToMeters(
 				mPeriodicIO.drivePosition,
 				Constants.Drive.WHEEL_CIRCUMFERENCE,
 				Constants.Drive.DRIVE_GEAR_RATIO);
 	}
+
+    /**
+     * Gets the speed of the drive wheel;
+     * @return The speed, in meters per second.
+     */
+    public double getDriveSpeed() {
+        return Conversions.RPSToMPS(
+            mPeriodicIO.driveVelocity,
+            Constants.Drive.WHEEL_CIRCUMFERENCE,
+            Constants.Drive.DRIVE_GEAR_RATIO);
+    }
+
+    /**
+     * Gets the current angle of the swerve module.
+     * @return The angle, as a {@code Rotation2d}.
+     */
+    public Rotation2d getModuleAngle() {
+		return Rotation2d.fromDegrees(getModuleAngleDegrees());
+	}
+
+    /**
+     * Gets the current angle of the swerve module.
+     * @return The angle, in degrees.
+     */
+    public double getModuleAngleDegrees() {
+		return Conversions.rotationsToDegrees(mPeriodicIO.rotationPosition, Constants.Drive.ANGLE_GEAR_RATIO);
+	}
+
+    public double getModuleAngleSpeed() {
+        return Units.RotationsPerSecond.of(mPeriodicIO.rotationVelocity).in(Units.DegreesPerSecond);
+    }
 
     /**
      * Retrieves the status signals.
@@ -224,19 +258,10 @@ public class SwerveModule extends SubsystemBase {
 		return mSignals;
 	}
 
-    /**
-     * Gets the current angle of the swerve module.
-     * @return The angle, as a {@code Rotation2d}.
-     */
-    public Rotation2d getModuleAngle() {
-		return Rotation2d.fromDegrees(getCurrentUnboundedDegrees());
-	}
-
-    /**
-     * Gets the current angle of the swerve module.
-     * @return The angle, in degrees.
-     */
-    public double getCurrentUnboundedDegrees() {
-		return Conversions.rotationsToDegrees(mPeriodicIO.rotationPosition, Constants.Drive.ANGLE_GEAR_RATIO);
-	}
+    @Override
+    public void initSendable(SendableBuilder builder) {
+        builder.addDoubleProperty("/Module#" + name + "/AngleDegrees", getModuleAngle()::getDegrees, null);
+        builder.addDoubleProperty("/Module#" + name + "/AngleSpeedDegreesPerSecond", this::getModuleAngleSpeed, null);
+        builder.addDoubleProperty("/Module#" + name + "/DriveSpeedMetersPerSecond", this::getDriveSpeed, null);
+    }
 }

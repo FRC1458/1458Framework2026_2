@@ -11,6 +11,7 @@ import frc.robot.Constants.Ports;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -122,5 +123,13 @@ public class Pigeon extends SubsystemBase {
 		Rotation2d angleChange = Rotation2d.fromRadians(simAngularVelocity * TimedRobot.kDefaultPeriod);
 		Rotation2d angle = getUnadjustedYaw().plus(angleChange);
 		gyroSimState.setRawYaw(angle.getDegrees());
+	}
+
+	@Override
+	public void initSendable(SendableBuilder builder) {
+		builder.setSmartDashboardType("Subsystem");
+		builder.addDoubleProperty("/RollDegrees", this.getRoll()::getDegrees, null);
+		builder.addDoubleProperty("/PitchDegrees", this.getPitch()::getDegrees, null);
+		builder.addDoubleProperty("/YawDegrees", this.getYaw()::getDegrees, null);
 	}
 }
