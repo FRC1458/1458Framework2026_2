@@ -28,22 +28,23 @@ public class VisionDeviceManager extends SubsystemBase {
 
 	private static TunableNumber timestampOffset = new TunableNumber("VisionTimestampOffset", (0.1), false);
 
-	private MovingAverage mHeadingAvg = new MovingAverage(100);
+	private MovingAverage<Double> mHeadingAvg = new MovingAverage<Double>(
+		100, Double.valueOf(0), 
+		(Double x, Double y) -> { return x + y; }, (Double x, Integer y) -> { return x / y; });
 	private double mMovingAvgRead = 0.0;
 
 	private static boolean disable_vision = false;
 
 	private VisionDeviceManager() {
-		mLeftCamera = new VisionDevice(Constants.Limelight.LEFT_VISION_DEVICE);
-		mRightCamera = new VisionDevice(Constants.Limelight.RIGHT_VISION_DEVICE);
-		mFrontCamera = new VisionDevice(Constants.Limelight.FRONT_VISION_DEVICE);
-		mBackCamera = new VisionDevice(Constants.Limelight.BACK_VISION_DEVICE);
+		mLeftCamera = new VisionDevice(Constants.Limelight.L_CONSTANTS);
+		mRightCamera = new VisionDevice(Constants.Limelight.R_CONSTANTS);
+		mFrontCamera = new VisionDevice(Constants.Limelight.F_CONSTANTS);
+		mBackCamera = new VisionDevice(Constants.Limelight.B_CONSTANTS);
 		mAllCameras = List.of(mLeftCamera, mRightCamera, mFrontCamera, mBackCamera);
 	}
 
 	@Override
 	public void periodic() {
-		//System.out.println("VisionDevice.readPeriodic()");
 		mAllCameras.forEach(VisionDevice::periodic);
 		mMovingAvgRead = mHeadingAvg.getAverage();
 		SmartDashboard.putNumber("Vision heading moving avg", getMovingAverageRead());
@@ -54,7 +55,7 @@ public class VisionDeviceManager extends SubsystemBase {
 		return mMovingAvgRead;
 	}
 
-	public synchronized MovingAverage getMovingAverage() {
+	public synchronized MovingAverage<Double> getMovingAverage() {
 		return mHeadingAvg;
 	}
 

@@ -1,12 +1,9 @@
 package frc.robot;
 
-import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import frc.robot.subsystems.drive.Drive;
-import frc.robot.subsystems.vision.VisionPoseAcceptor;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.estimator.ExtendedKalmanFilter;
@@ -14,20 +11,15 @@ import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.numbers.*;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.Nat;
 import edu.wpi.first.math.StateSpaceUtil;
-import frc.robot.lib.util.MovingAverageTwist2d;
+import frc.robot.lib.localization.VisionPoseAcceptor;
+import frc.robot.lib.util.MovingAverage;
 import frc.robot.lib.util.Util;
 import frc.robot.lib.util.interpolation.*;
 
 
 public class RobotState {
-	private static final int OBSERVATION_BUFFER_SIZE = 50;
-	private static final Matrix<N2, N1> STATE_STD_DEVS = VecBuilder.fill(Math.pow(0.05, 1), Math.pow(0.05, 1)); // drive
-	private static final Matrix<N2, N1> LOCAL_MEASUREMENT_STD_DEVS = VecBuilder.fill(
-			Math.pow(0.02, 1), // vision
-			Math.pow(0.02, 1));
 	public static Optional<VisionUpdate> mLatestVisionUpdate;
 
 	private static Optional<InterpolatingTranslation2d> mInitialFieldToOdom = Optional.empty();
@@ -38,7 +30,7 @@ public class RobotState {
 
 	private static Twist2d mVehicleVelocityMeasured;
 	private static Twist2d mVehichleVelocityPredicted;
-	private static MovingAverageTwist2d mVehicleVelocityMeasuredFiltered;
+	private static MovingAverage<Twist2d> mVehicleVelocityMeasuredFiltered;
 
 	private static boolean mHasRecievedVisionUpdate = false;
 	private static boolean mIsInAuto = false;
@@ -55,17 +47,20 @@ public class RobotState {
 	 * @param predictedVelocity Predicted field-relative velocity (usually swerve
 	 *                           setpoint).
 	 */
-
 	public static synchronized void reset(double now, InterpolatingPose2d initialOdomToVehicle) {
 		mOdometryToVehicle = new InterpolatingTreeMap<InterpolatingDouble, InterpolatingPose2d>(
-				OBSERVATION_BUFFER_SIZE);
+				Constants.Odometry.OBSERVATION_BUFFER_SIZE);
 		mOdometryToVehicle.put(new InterpolatingDouble(now), initialOdomToVehicle);
 		mFieldToOdometry = new InterpolatingTreeMap<InterpolatingDouble, InterpolatingTranslation2d>(
-				OBSERVATION_BUFFER_SIZE);
+				Constants.Odometry.OBSERVATION_BUFFER_SIZE);
 		mFieldToOdometry.put(new InterpolatingDouble(now), getmInitialFieldToOdom());
 		mVehicleVelocityMeasured = new Twist2d();
 		mVehichleVelocityPredicted = new Twist2d();
-		mVehicleVelocityMeasuredFiltered = new MovingAverageTwist2d(25);
+		mVehicleVelocityMeasuredFiltered = new MovingAverage<Twist2d>(
+			25, new Twist2d(), 
+			(Twist2d x, Twist2d y) -> { return new Twist2d(x.dx + y.dx, x.dy + y.dy, x.dtheta + y.dtheta); }, 
+			(Twist2d x, Integer y) -> { return new Twist2d(x.dx / y, x.dy / y, x.dtheta / y); }
+		);
 
 		mLastTimestamp = now;
 		mLatestVisionUpdate = Optional.empty();
@@ -82,8 +77,8 @@ public class RobotState {
 				Nat.N2(), // Dimensions of vision (x, y)
 				(x, u) -> u, // The derivative of the output is predicted shift (always 0)
 				(x, u) -> x, // The output is position (x, y)
-				STATE_STD_DEVS, // Standard deviation of position (uncertainty propagation with no vision)
-				LOCAL_MEASUREMENT_STD_DEVS, // Standard deviation of vision measurements
+				Constants.Odometry.STATE_STD_DEVS, // Standard deviation of position (uncertainty propagation with no vision)
+				Constants.Odometry.LOCAL_MEASUREMENT_STD_DEVS, // Standard deviation of vision measurements
 				Constants.DT);
 	}
 
@@ -122,7 +117,7 @@ public class RobotState {
 			mKalmanFilter.setXhat(1, fieldToOdom.getY());
 			mLatestVisionUpdate = Optional.ofNullable(update);
 
-			Drive.getInstance().resetOdometry(new Pose2d(fieldToOdom, getLatestOdomToVehicle().getValue().getRotation()));
+			Drive.getInstance().setOdometry(new Pose2d(fieldToOdom, getLatestOdomToVehicle().getValue().getRotation()));
 		} else {
 			double visionTimestamp = mLatestVisionUpdate.get().mTimestamp;
 			mLastTimestamp = mLatestVisionUpdate.get().mTimestamp;

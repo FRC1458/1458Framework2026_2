@@ -14,12 +14,9 @@ public final class Autos {
 		return Commands.sequence(subsystem.exampleMethodCommand(), new ExampleCommand(subsystem));
 	}
 
+	/** An auto that runs a single test trajectory. */
 	public static Command driveAuto(Drive drive) {
-		RedTrajectory traj = TrajectoryLoader.loadTrajectory(TrajectoryType.PATHPLANNER, "zisen").get();
+		RedTrajectory traj = TrajectoryLoader.loadAutoTrajectory(TrajectoryType.PATHPLANNER, "zisen").get();
 		return drive.trajectoryCommand(traj);
-	}
-
-	private Autos() {
-		throw new UnsupportedOperationException("This is a utility class!");
 	}
 }

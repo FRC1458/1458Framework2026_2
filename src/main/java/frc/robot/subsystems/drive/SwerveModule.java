@@ -53,6 +53,7 @@ public class SwerveModule extends SubsystemBase {
 
     public SwerveModule(String moduleName, SwerveModuleConstants constants, CANcoder canCoder) {
         name = moduleName;
+        setName("Module " + moduleName);
         mConstants = constants;
 
         mAngleMotor = TalonFXManager.createMotor(name + " Angle Motor", constants.angleMotorID, "Angle");
@@ -75,6 +76,10 @@ public class SwerveModule extends SubsystemBase {
 		mSignals[3] = mAngleMotor.getRotorVelocity();
     }
 
+    /**
+     * Sets the target state of this module.
+     * @param state The target {@code SwerveModuleState}.
+     */
     public void setTargetState(SwerveModuleState state) {
         mPeriodicIO.targetState = state;
     }
@@ -136,6 +141,10 @@ public class SwerveModule extends SubsystemBase {
         return mPeriodicIO.currentState;
     }
 
+    /**
+     * Sets the target velocities of the swerve module.
+     * @param targetState The target {@code SwerveModuleState}.
+     */
     public void setVelocity(SwerveModuleState targetState) {
         boolean flip = setSteeringAngleOptimized(targetState.angle.unaryMinus());
         mPeriodicIO.targetDriveVelocity = targetState.speedMetersPerSecond * (flip ? -1.0 : 1.0);
@@ -152,13 +161,18 @@ public class SwerveModule extends SubsystemBase {
         }
     }
 
-    private boolean setSteeringAngleOptimized(Rotation2d desiredAngle) {
+    /**
+     * Sets the angle of the swerve module, and flips it if it is more efficient to.
+     * @param targetAngle The desire angle of the swerve module.
+     * @return Whether to flip the drive direction.
+     */
+    private boolean setSteeringAngleOptimized(Rotation2d targetAngle) {
         boolean flip = false;
 
         double currentAngleDegrees = mCanCoder.getPosition().getValueAsDouble() * 360.0;
         Rotation2d currentAngle = Rotation2d.fromDegrees(currentAngleDegrees);
 
-        Rotation2d delta = desiredAngle.minus(currentAngle);
+        Rotation2d delta = targetAngle.minus(currentAngle);
         double deltaDegrees = delta.getDegrees();
 
         if (deltaDegrees > 90.0) {
@@ -169,11 +183,14 @@ public class SwerveModule extends SubsystemBase {
             flip = true;
         }
 
-        double targetAngle = currentAngleDegrees + deltaDegrees;
-        setSteeringAngleRaw(targetAngle);
+        setSteeringAngleRaw(currentAngleDegrees + deltaDegrees);
         return flip;
     }
 
+    /**
+     * Sets the target angle position of the swerve module.
+     * @param angleDegrees The angle position, in degrees.
+     */
     private void setSteeringAngleRaw(double angleDegrees) {
         double rotorPosition = Conversions.degreesToRotation(angleDegrees, Constants.Drive.ANGLE_GEAR_RATIO);
         mPeriodicIO.angleRequest = new PositionVoltage(rotorPosition);
@@ -188,6 +205,10 @@ public class SwerveModule extends SubsystemBase {
 		mPeriodicIO.drivePosition = mDriveMotor.getRotorPosition().getValueAsDouble();
 	}
 
+    /**
+     * Gets the distance the drive wheel has traversed.
+     * @return The distance, in meters.s
+     */
     public double getDriveDistanceMeters() {
 		return Conversions.rotationsToMeters(
 				mPeriodicIO.drivePosition,
@@ -195,14 +216,26 @@ public class SwerveModule extends SubsystemBase {
 				Constants.Drive.DRIVE_GEAR_RATIO);
 	}
 
+    /**
+     * Retrieves the status signals.
+     * @return The status signals from this swerve module.
+     */
     public BaseStatusSignal[] getUsedStatusSignals() {
 		return mSignals;
 	}
 
+    /**
+     * Gets the current angle of the swerve module.
+     * @return The angle, as a {@code Rotation2d}.
+     */
     public Rotation2d getModuleAngle() {
 		return Rotation2d.fromDegrees(getCurrentUnboundedDegrees());
 	}
 
+    /**
+     * Gets the current angle of the swerve module.
+     * @return The angle, in degrees.
+     */
     public double getCurrentUnboundedDegrees() {
 		return Conversions.rotationsToDegrees(mPeriodicIO.rotationPosition, Constants.Drive.ANGLE_GEAR_RATIO);
 	}

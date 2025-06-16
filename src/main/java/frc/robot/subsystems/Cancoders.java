@@ -1,7 +1,5 @@
 package frc.robot.subsystems;
 
-
-
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
@@ -28,33 +26,33 @@ public class Cancoders {
 	private final CANcoder mBackLeft;
 	private final CANcoder mBackRight;
 
-	private final CanTsObserver mFrontRightObserver;
-	private final CanTsObserver mFrontLeftObserver;
-	private final CanTsObserver mBackLeftObserver;
-	private final CanTsObserver mBackRightObserver;
+	private final CanTimestampObserver mFrontRightObserver;
+	private final CanTimestampObserver mFrontLeftObserver;
+	private final CanTimestampObserver mBackLeftObserver;
+	private final CanTimestampObserver mBackRightObserver;
 
 	private static final double kBootUpErrorAllowanceTime = 10.0;
 
-	private static class CanTsObserver {
+	private static class CanTimestampObserver {
 		private final CANcoder cancoder;
-		private Optional<Double> lastTs = Optional.empty();
+		private Optional<Double> lastTimestamp = Optional.empty();
 		private int validUpdates = 0;
 		private static final int kRequiredValidTimestamps = 10;
 
-		public CanTsObserver(CANcoder cancoder) {
+		public CanTimestampObserver(CANcoder cancoder) {
 			this.cancoder = cancoder;
 		}
 
 		public boolean hasUpdate() {
 			StatusSignal<Angle> absolutePositionSignal = cancoder.getAbsolutePosition();
 
-			double ts = absolutePositionSignal.getTimestamp().getTime();
-			if (lastTs.isEmpty()) {
-				lastTs = Optional.of(ts);
+			double timestamp = absolutePositionSignal.getTimestamp().getTime();
+			if (lastTimestamp.isEmpty()) {
+				lastTimestamp = Optional.of(timestamp);
 			}
-			if (ts > lastTs.get()) {
+			if (timestamp > lastTimestamp.get()) {
 				validUpdates++;
-				lastTs = Optional.of(ts);
+				lastTimestamp = Optional.of(timestamp);
 			}
 			return validUpdates > kRequiredValidTimestamps;
 		}
@@ -90,16 +88,16 @@ public class Cancoders {
 
 	private Cancoders() {
 		mFrontLeft = build(Ports.FL_CANCODER);
-		mFrontLeftObserver = new CanTsObserver(mFrontLeft);
+		mFrontLeftObserver = new CanTimestampObserver(mFrontLeft);
 
 		mFrontRight = build(Ports.FR_CANCODER);
-		mFrontRightObserver = new CanTsObserver(mFrontRight);
+		mFrontRightObserver = new CanTimestampObserver(mFrontRight);
 
 		mBackLeft = build(Ports.BL_CANCODER);
-		mBackLeftObserver = new CanTsObserver(mBackLeft);
+		mBackLeftObserver = new CanTimestampObserver(mBackLeft);
 
 		mBackRight = build(Ports.BR_CANCODER);
-		mBackRightObserver = new CanTsObserver(mBackRight);
+		mBackRightObserver = new CanTimestampObserver(mBackRight);
 	}
 
 	public boolean allHaveBeenInitialized() {

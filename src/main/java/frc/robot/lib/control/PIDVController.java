@@ -22,6 +22,11 @@ public class PIDVController implements Controller<Pair<Double, Double>, Double> 
 
     private final Timer mDtTracker = new Timer();
 
+    /**
+     * Creates a PIDV controller, which is a PID controller 
+     * where the derivative is replaced by accurate velocity measurements.
+     * @param constants The {@link PIDFConstants}.
+     */
     public PIDVController(PIDFConstants constants) {
         this.mConstants = constants;
         mDtTracker.start();
@@ -30,13 +35,18 @@ public class PIDVController implements Controller<Pair<Double, Double>, Double> 
     public PIDVController(PIDConstants constants) {
         this(new PIDFConstants(constants));
     }
-
+    /**
+     * Makes the controller continuous, which means that values repeat.
+     * @param minInput The minimum value.
+     * @param maxInput The maximum value.
+     */
     public void enableContinuousInput(double minInput, double maxInput) {
         isContinuous = true;
         minRange = minInput;
         maxRange = maxInput;
     }
 
+    /** Makes the controller discontinuous */
     public void disableContinuousInput() {
         isContinuous = false;
     }
@@ -51,6 +61,7 @@ public class PIDVController implements Controller<Pair<Double, Double>, Double> 
         this.target = target;
     }
 
+    /** Sets the feedforward value. */
     public void setFeedforward(Double feedforward) {
         this.feedforward = feedforward;
     }
@@ -78,10 +89,12 @@ public class PIDVController implements Controller<Pair<Double, Double>, Double> 
              + mConstants.kF * feedforward;
     }
 
+    /** Sets the integral value. */
     public void setIntegral(double integral) {
         this.integral = integral;
     }
 
+    /** Resets the controller. */
     public void reset() {
         integral = 0.0;
         feedforward = 0.0;

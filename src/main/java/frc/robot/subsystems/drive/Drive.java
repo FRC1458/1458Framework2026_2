@@ -3,6 +3,7 @@ package frc.robot.subsystems.drive;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.DoubleSupplier;
 
 import com.pathplanner.lib.path.GoalEndState;
 import com.pathplanner.lib.path.PathConstraints;
@@ -30,18 +31,20 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants;
 import frc.robot.Robot;
 import frc.robot.RobotState;
 import frc.robot.lib.localization.FieldLayout;
 import frc.robot.lib.swerve.*;
 import frc.robot.lib.trajectory.RedTrajectory;
+import frc.robot.lib.util.Conversions;
 import frc.robot.lib.util.Util;
 import frc.robot.lib.util.interpolation.InterpolatingPose2d;
 import frc.robot.subsystems.Cancoders;
 import frc.robot.subsystems.WheelTracker;
 
-public class Drive extends SubsystemBase {
+public class Drive extends IDrive {
     private static Drive mInstance;
     public static Drive getInstance() {
         if (mInstance == null) {
@@ -54,7 +57,8 @@ public class Drive extends SubsystemBase {
     private static enum State {
         DISABLED,
         TELEOP,
-        PATH_FOLLOWING
+        PATH_FOLLOWING,
+        X_LOCK
     }
 
     private PeriodicIO mPeriodicIO;
@@ -110,25 +114,37 @@ public class Drive extends SubsystemBase {
         mPathFinder = new LocalADStar();
     }
 
-    @Override
-    public void periodic() {        
+    /**
+     * Does some calculations
+     * idk really what this does.
+     */
+    private void updateOdometry() {
         SwerveModuleState[] moduleStates = getModuleStates();
-		Twist2d twist_vel = toTwist2d(mKinematics.toChassisSpeeds(moduleStates));
+		Twist2d twist_vel = Conversions.toTwist2d(mKinematics.toChassisSpeeds(moduleStates));
 		Translation2d translation_vel = new Translation2d(twist_vel.dx, twist_vel.dy);
 		translation_vel = translation_vel.rotateBy(Pigeon.getInstance().getYaw());
         
-        Twist2d predictedTwistVelocity = new Twist2d(mPeriodicIO.targetSpeeds.vxMetersPerSecond,mPeriodicIO.targetSpeeds.vyMetersPerSecond,mPeriodicIO.targetSpeeds.omegaRadiansPerSecond);
+        Twist2d predictedTwistVelocity = Conversions.toTwist2d(mPeriodicIO.targetSpeeds);
 		mPeriodicIO.predictedVelocity =
-            Util.logMap(Util.expMap(predictedTwistVelocity).rotateBy(Pigeon.getInstance().getYaw()));
+            Util.logMap(Util.expMap(
+                predictedTwistVelocity).rotateBy(
+                    Pigeon.getInstance().getYaw()));
+        
 		mPeriodicIO.measuredVelocity = new Twist2d(
             translation_vel.getX(),
             translation_vel.getY(),
             twist_vel.dtheta);
+        
         RobotState.addOdometryUpdate(
             Timer.getFPGATimestamp(),
             new InterpolatingPose2d(mWheelTracker.getRobotPose()),
             mPeriodicIO.measuredVelocity,
             mPeriodicIO.predictedVelocity);
+    }
+
+    @Override
+    public void periodic() {        
+        updateOdometry();
         switch (mState) {
             case DISABLED:
                 setTargetSpeeds(new ChassisSpeeds());
@@ -156,7 +172,6 @@ public class Drive extends SubsystemBase {
 
         FieldLayout.mField.setRobotPose(mWheelTracker.getRobotPose());
 
-		// Publish swerve module states and rotaton to smartdashboard
 		SwerveModuleState[] other = new SwerveModuleState[4];
 		for (int i = 0; i < mPeriodicIO.targetModuleStates.length; i++) {
 			other[i] = mPeriodicIO.targetModuleStates[i];
@@ -175,26 +190,18 @@ public class Drive extends SubsystemBase {
         Pigeon.getInstance().setSimAngularVelocity(mPeriodicIO.targetSpeeds.omegaRadiansPerSecond);
     }
 
-    public void setSpeedsFromJoystick(double x, double y, double z) {
-        setTargetSpeeds(
-            ChassisSpeeds.fromFieldRelativeSpeeds(
-                x * Constants.Drive.MAX_SPEED,
-                y * Constants.Drive.MAX_SPEED, 
-                z * Constants.Drive.MAX_ROTATION_SPEED,
-                RobotState.getLatestFieldToVehicle().getRotation()
-            )
-        );
+    @Override
+    public Command teleopCommand(DoubleSupplier x, DoubleSupplier y, DoubleSupplier theta) { 
+        return Commands.runOnce(this::setTeleop, this)
+            .andThen(Commands.run(() -> {
+                        this.setSpeedsFromController(
+                            x.getAsDouble(), 
+                            y.getAsDouble(),
+                            theta.getAsDouble());
+                    }, this));
     }
 
-    public void setTeleop() {
-        this.mState = State.TELEOP;
-        setTargetSpeeds(new ChassisSpeeds());
-    }
-
-    public void setTargetSpeeds(ChassisSpeeds speeds) {
-        mPeriodicIO.targetSpeeds = limitSpeeds(speeds);
-    }
-
+    @Override
     public Command trajectoryCommand(RedTrajectory trajectory) {
         if (trajectory == null) {
             System.out.println("the trajectory was.");
@@ -206,6 +213,10 @@ public class Drive extends SubsystemBase {
                        .andThen(new InstantCommand(this::setTeleop));
     }
 
+    /**
+     * A command to drive to a pose.
+     * @param pose The pose to drive to.
+     */
     public Command driveToPoseCommand(Pose2d pose) {
         if (pose == null) {
             System.out.println("the pose was.");
@@ -220,30 +231,81 @@ public class Drive extends SubsystemBase {
             RedTrajectory traj = new RedTrajectory(mPathFinder.getCurrentPath(
                 Constants.Pathplanner.GLOBAL_CONSTRAINTS, 
                 new GoalEndState(0, pose.getRotation()))
-            .getIdealTrajectory(Constants.Pathplanner.config).get());
+                .getIdealTrajectory(Constants.Pathplanner.config).get(), false);
             return trajectoryCommand(traj);
         } catch (Exception e) {
-            DriverStation.reportWarning("Trajectory failed to generate", false);
+            DriverStation.reportWarning("Trajectory failed to generate while generating command", false);
             return Commands.none();
         }
     }
 
-    public void setTrajectory(RedTrajectory trajectory) {
-        mDriveController.reset();
-        mDriveController.setTrajectory(trajectory);
-        this.mState = State.PATH_FOLLOWING;
+    /**
+     * A command to set the robot into X-lock, meaning to arrange the wheels into an X-shaped configuration.
+     */
+    public Command xLockCommand() {
+        return Commands.runOnce(this::setXLock);
+    }
+    
+    @Override
+    protected void setTeleop() {
+        this.mState = State.TELEOP;
+        setTargetSpeeds(new ChassisSpeeds());
     }
 
-    public void resetOdometry(Pose2d pose) {
+    @Override
+    protected void setTrajectory(RedTrajectory trajectory) {
+        this.mState = State.PATH_FOLLOWING;
+        mDriveController.reset();
+        mDriveController.setTrajectory(trajectory);
+    }
+
+    /**
+     * Sets the robot into X-lock mode.
+     */
+    private void setXLock() {
+        this.mState = State.X_LOCK;
+        mPeriodicIO.targetModuleStates = new SwerveModuleState[] {
+            new SwerveModuleState(0.0, Rotation2d.fromDegrees(-45)),
+            new SwerveModuleState(0.0, Rotation2d.fromDegrees(45)),
+            new SwerveModuleState(0.0, Rotation2d.fromDegrees(45)),
+            new SwerveModuleState(0.0, Rotation2d.fromDegrees(-45))
+        };
+    }
+
+    @Override
+    public void setOdometry(Pose2d pose) {
         mWheelTracker.resetPose(pose);
         RobotState.addOdometryUpdate(
             Timer.getFPGATimestamp(), 
             new InterpolatingPose2d(mWheelTracker.getRobotPose()),
             mPeriodicIO.measuredVelocity, mPeriodicIO.predictedVelocity
 		);
-	}
+	}    
 
-    public void setModuleTargetStates(ChassisSpeeds speeds) {
+    /**
+     * Sets target speeds based on controller input.
+     * @param x The x component of the target chassis speeds, field-relative.
+     * @param y The y component of the target chassis speeds, field-relative.
+     * @param theta The rotation component of the target chassis speeds, field-relative.
+     */
+    public void setSpeedsFromController(double x, double y, double z) {
+        setTargetSpeeds(
+            ChassisSpeeds.fromFieldRelativeSpeeds(
+                x * Constants.Drive.MAX_SPEED,
+                y * Constants.Drive.MAX_SPEED, 
+                z * Constants.Drive.MAX_ROTATION_SPEED,
+                RobotState.getLatestFieldToVehicle().getRotation()
+            )
+        );
+    }
+    
+    @Override
+    protected void setTargetSpeeds(ChassisSpeeds speeds) {
+        mPeriodicIO.targetSpeeds = limitSpeeds(speeds);
+    }
+
+    @Override
+    protected void setModuleTargetStates(ChassisSpeeds speeds) {
         SwerveModuleState[] rawTargetModuleStates = mKinematics.toSwerveModuleStates(mPeriodicIO.targetSpeeds);
         SwerveDriveKinematics.desaturateWheelSpeeds(
             rawTargetModuleStates,
@@ -252,6 +314,11 @@ public class Drive extends SubsystemBase {
         mPeriodicIO.targetModuleStates = rawTargetModuleStates;
     }
 
+    /**
+     * Limits the speeds based on kinematic limits.
+     * @param rawSpeeds The raw target speeds.
+     * @return The limited speeds, abiding by kinematic limits.
+     */
     private ChassisSpeeds limitSpeeds(ChassisSpeeds rawSpeeds) {
         double rawVx = rawSpeeds.vxMetersPerSecond;
         double rawVy = rawSpeeds.vyMetersPerSecond;
@@ -273,15 +340,15 @@ public class Drive extends SubsystemBase {
         return new ChassisSpeeds(vx, vy, omega);
     }
 
+    /**
+     * Gets the states of each swerve module.
+     * @return An array of the {@code SwerveModuleState}s of each swerve module.
+     */
     public SwerveModuleState[] getModuleStates() {
 		List<SwerveModuleState> states = new ArrayList<>();
 		for (SwerveModule mod : mSwerveModules) {
 			states.add(mod.getState());
 		}
 		return states.toArray(new SwerveModuleState[]{});
-	}
-
-    public Twist2d toTwist2d(ChassisSpeeds chassisSpeeds) {
-		return new Twist2d(chassisSpeeds.vxMetersPerSecond, chassisSpeeds.vyMetersPerSecond, chassisSpeeds.omegaRadiansPerSecond);
 	}
 }

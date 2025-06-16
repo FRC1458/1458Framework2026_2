@@ -1,8 +1,19 @@
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.Constants.Controllers;
+import frc.robot.commands.Autos;
+import frc.robot.commands.ExampleCommand;
+import frc.robot.lib.util.interpolation.InterpolatingPose2d;
+import frc.robot.subsystems.ExampleSubsystem;
+import frc.robot.subsystems.drive.Drive;
 
 /**
  * The methods in this class are called automatically corresponding to each mode, as described in
@@ -10,18 +21,23 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
  * this project, you must also update the Main.java file in the project.
  */
 public class Robot extends TimedRobot {
+	private final CommandScheduler mCommandScheduler;
 	private Command mAutoCommand;
 
-	private final RobotContainer mRobotContainer;
+	private final ExampleSubsystem mExampleSubsystem = new ExampleSubsystem();
+	private final Drive mDrive = Drive.getInstance();
 
+	private final CommandXboxController mController =
+		new CommandXboxController(Controllers.DRIVER_CONTROLLER_PORT);
 	/**
 	 * This function is run when the robot is first started up and should be used for any
 	 * initialization code.
 	 */
 	public Robot() {
-		// Instantiate our RobotContainer.  This will perform all our button bindings, and put our
-		// autonomous chooser on the dashboard.
-		mRobotContainer = new RobotContainer();
+		mCommandScheduler = CommandScheduler.getInstance();
+
+		RobotState.reset(Timer.getFPGATimestamp(), new InterpolatingPose2d());
+		RobotState.resetKalman();
 	}
 
 	/**
@@ -37,84 +53,85 @@ public class Robot extends TimedRobot {
 		// commands, running already-scheduled commands, removing finished or interrupted commands,
 		// and running subsystem periodic() methods.  This must be called from the robot's periodic
 		// block in order for anything in the Command-based framework to work.
-		CommandScheduler.getInstance().run();
+		mCommandScheduler.run();
 	}
 
 	/** This function is called once each time the robot enters Disabled mode. */
 	@Override
 	public void disabledInit() {
-		mRobotContainer.disabledInit();
+
 	}
 
+	/** This function is called periodically during disabled. */
 	@Override
 	public void disabledPeriodic() {
-		mRobotContainer.disabledPeriodic();
+
 	}
 
-	/** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
+	/** This autonomous runs the autonomous command selected. */
 	@Override
 	public void autonomousInit() {
-		mAutoCommand = mRobotContainer.getAutonomousCommand();
+		mAutoCommand = Autos.driveAuto(mDrive);
 
-		// schedule the autonomous command (example)
 		if (mAutoCommand != null) {
 			mAutoCommand.schedule();
 		}
-
-		mRobotContainer.enabledInit();
-		mRobotContainer.autonomousInit();
 	}
 
 	/** This function is called periodically during autonomous. */
 	@Override
 	public void autonomousPeriodic() {
-		mRobotContainer.autonomousPeriodic();
+
+	}
+
+	/** This function is called when autonomous mode ends. */
+	@Override
+	public void autonomousExit() {
+
 	}
 
 	@Override
 	public void teleopInit() {
-		// This makes sure that the autonomous stops running when
-		// teleop starts running. If you want the autonomous to
-		// continue until interrupted by another command, remove
-		// this line or comment it out.
+		// This makes sure that the autonomous stops running when teleop starts running. 
 		if (mAutoCommand != null) {
 			mAutoCommand.cancel();
 		}
 
-		mRobotContainer.enabledInit();
-		mRobotContainer.teleopInit();
+		new Trigger(mExampleSubsystem::exampleCondition)
+			.onTrue(new ExampleCommand(mExampleSubsystem));
+
+		mController.b().whileTrue(mExampleSubsystem.exampleMethodCommand());
+		mController.a().onTrue(mDrive.driveToPoseCommand(new Pose2d(5, 5, Rotation2d.fromDegrees(110))));
+		mDrive.setDefaultCommand(mDrive.teleopCommand(mController::getLeftY, mController::getLeftX, mController::getRightY));
 	}
 
 	/** This function is called periodically during operator control. */
 	@Override
 	public void teleopPeriodic() {
-		mRobotContainer.teleopPeriodic();
+
 	}
 
 	@Override
 	public void testInit() {
 		// Cancels all running commands at the start of test mode.
 		CommandScheduler.getInstance().cancelAll();
-
-		mRobotContainer.enabledInit();
-		mRobotContainer.testInit();
 	}
 
 	/** This function is called periodically during test mode. */
 	@Override
 	public void testPeriodic() {
-		mRobotContainer.testPeriodic();
+
 	}
 
 	/** This function is called once when the robot is first started up. */
 	@Override
 	public void simulationInit() {
-		mRobotContainer.simulationInit();
+
 	}
 
 	/** This function is called periodically whilst in simulation. */
 	@Override
 	public void simulationPeriodic() {
-		mRobotContainer.simulationPeriodic();
+
 	}
 }

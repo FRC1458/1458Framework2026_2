@@ -1,11 +1,10 @@
-package frc.robot.subsystems.vision;
+package frc.robot.lib.localization;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import frc.robot.lib.localization.FieldLayout;
 
 public class VisionPoseAcceptor {
 	private static final double kFieldBorderMargin = 0.5;
@@ -52,9 +51,9 @@ public class VisionPoseAcceptor {
 
 		// Check out of field
 		if (visionFieldToVehicle.getTranslation().getX() < -kFieldBorderMargin
-				|| visionFieldToVehicle.getTranslation().getX() > FieldLayout.kFieldLength + kFieldBorderMargin
+				|| visionFieldToVehicle.getTranslation().getX() > FieldLayout.FIELD_LENGTH + kFieldBorderMargin
 				|| visionFieldToVehicle.getTranslation().getY() < -kFieldBorderMargin
-				|| visionFieldToVehicle.getTranslation().getY() > FieldLayout.kFieldWidth + kFieldBorderMargin) {
+				|| visionFieldToVehicle.getTranslation().getY() > FieldLayout.FIELD_WIDTH + kFieldBorderMargin) {
 			SmartDashboard.putString("Vision validation", "Outside field");
 			return false;
 		}

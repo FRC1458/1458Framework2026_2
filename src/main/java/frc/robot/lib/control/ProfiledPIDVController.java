@@ -21,17 +21,27 @@ public class ProfiledPIDVController implements Controller<Pair<Double, Double>, 
 
     private final Timer mDtTracker = new Timer();
 
+    /**
+     * A {@link PIDVController} with a trapezoid profile, used for limiting speed and acceleration.
+     * @param constants The {@link ProfiledPIDFConstants}.
+     */
     public ProfiledPIDVController(ProfiledPIDFConstants constants) {
         this.mConstants = constants;
         mDtTracker.start();
     }
 
+    /**
+     * Makes the controller continuous, which means that values repeat.
+     * @param minInput The minimum value.
+     * @param maxInput The maximum value.
+     */
     public void enableContinuousInput(double minInput, double maxInput) {
         continuous = true;
         this.minRange = minInput;
         this.maxRange = maxInput;
     }
 
+    /** Makes the controller discontinuous */
     public void disableContinuousInput() {
         continuous = false;
     }
@@ -46,6 +56,7 @@ public class ProfiledPIDVController implements Controller<Pair<Double, Double>, 
         this.target = target;
     }
 
+    /** Sets the feedforward value. */
     public void setFeedforward(Double feedforward) {
         this.feedforward = feedforward;
     }
@@ -73,10 +84,12 @@ public class ProfiledPIDVController implements Controller<Pair<Double, Double>, 
              + mConstants.kF * feedforward;
     }
 
+    /** Sets the integral value. */
     public void setIntegral(double integral) {
         this.integral = integral;
     }
 
+    /** Resets the controller. */
     public void reset() {
         integral = 0.0;
         feedforward = 0.0;

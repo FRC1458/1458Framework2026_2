@@ -28,8 +28,8 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 public class FieldLayout {
 	//TODO: this must be tuned to the specific year's field
 	public static Field2d mField;
-	public static double kFieldLength = Units.inchesToMeters(651.223);
-	public static double kFieldWidth = Units.inchesToMeters(323.277);
+	public static final double FIELD_LENGTH = Units.inchesToMeters(651.223);
+	public static final double FIELD_WIDTH = Units.inchesToMeters(323.277);
 
 	public static final double APRITAG_WIDTH = Units.inchesToMeters(6.50);
 	public static final AprilTagFieldLayout APRILTAG_MAP;
@@ -46,7 +46,7 @@ public class FieldLayout {
 	public static Pose2d handleAllianceFlip(Pose2d blue_pose, boolean is_red_alliance) {
 		if (is_red_alliance) {
             blue_pose = new Pose2d(
-                new Translation2d((kFieldLength / 2.0) + ((kFieldLength / 2.0) - blue_pose.getX()), blue_pose.getY()), 
+                new Translation2d((FIELD_LENGTH / 2.0) + ((FIELD_LENGTH / 2.0) - blue_pose.getX()), blue_pose.getY()), 
                 new Rotation2d(-blue_pose.getRotation().getCos(), blue_pose.getRotation().getSin())
             );
 		}
@@ -55,7 +55,7 @@ public class FieldLayout {
 
 	public static Translation2d handleAllianceFlip(Translation2d blue_translation, boolean is_red_alliance) {
 		if (is_red_alliance) {
-            blue_translation = new Translation2d((kFieldLength / 2.0) + ((kFieldLength / 2.0) - blue_translation.getX()), blue_translation.getY());
+            blue_translation = new Translation2d((FIELD_LENGTH / 2.0) + ((FIELD_LENGTH / 2.0) - blue_translation.getX()), blue_translation.getY());
 		}
 		return blue_translation;
 	}
@@ -69,7 +69,7 @@ public class FieldLayout {
 
 	public static double distanceFromAllianceWall(double x_coordinate, boolean is_red_alliance) {
 		if (is_red_alliance) {
-			return kFieldLength - x_coordinate;
+			return FIELD_LENGTH - x_coordinate;
 		}
 		return x_coordinate;
 	}

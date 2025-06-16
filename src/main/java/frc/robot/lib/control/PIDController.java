@@ -15,26 +15,41 @@ public class PIDController implements Controller<Double, Double> {
     private double prevError = 0.0;
     private double integral = 0.0;
 
-    // Continuous-input support
     private boolean isContinuousInputEnabled = false;
-    private double mMinInput = 0.0;
-    private double mMaxInput = 0.0;
+    private double minInput = 0.0;
+    private double maxInput = 0.0;
 
     private final Timer mDtTracker = new Timer();
 
+    /** 
+     * A PID(F) controller. It works by acting like a dampened string, pulling the output towards a target point.
+     * @param constants The {@link PIDFConstants}.
+     */
     public PIDController(PIDFConstants constants) {
         this.mConstants = constants;
         mDtTracker.start();
     }
-
+    /** 
+     * A PID controller. It works by acting like a dampened string, pulling the output towards a target point.
+     * @param constants The {@link PIDConstants}.
+     */
     public PIDController(PIDConstants constants) {
         this(new PIDFConstants(constants));
     }
-
+    /**
+     * Makes the controller continuous, which means that values repeat.
+     * @param minInput The minimum value.
+     * @param maxInput The maximum value.
+     */
     public void enableContinuousInput(double minimumInput, double maximumInput) {
         isContinuousInputEnabled = true;
-        mMinInput = minimumInput;
-        mMaxInput = maximumInput;
+        minInput = minimumInput;
+        maxInput = maximumInput;
+    }
+
+    /** Makes the controller discontinuous */
+    public void disableContinuousInput() {
+        isContinuousInputEnabled = false;
     }
 
     @Override
@@ -47,6 +62,7 @@ public class PIDController implements Controller<Double, Double> {
         this.target = target;
     }
 
+    /** Sets the feedforward value. */
     public void setFeedforward(Double feedforward) {
         this.feedforward = feedforward;
     }
@@ -60,7 +76,7 @@ public class PIDController implements Controller<Double, Double> {
         }
 
         if (isContinuousInputEnabled) {
-            double range = mMaxInput - mMinInput;
+            double range = maxInput - minInput;
             double halfRange = range / 2.0;
             error = MathUtil.inputModulus(target - measurement, -halfRange, halfRange);
         } else {
@@ -78,10 +94,12 @@ public class PIDController implements Controller<Double, Double> {
              + mConstants.kF * feedforward;
     }
 
+    /** Sets the integral value. */
     public void setIntegral(double integral) {
         this.integral = integral;
     }
 
+    /** Resets the controller. */
     public void reset() {
         integral = 0.0;
         error = 0.0;

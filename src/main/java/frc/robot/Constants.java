@@ -3,14 +3,18 @@ package frc.robot;
 import static edu.wpi.first.units.Units.Meters;
 
 import java.io.IOException;
-
 import org.json.simple.parser.ParseException;
 
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.path.PathConstraints;
 
+import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -19,7 +23,6 @@ import frc.robot.lib.control.ControlConstants.ProfiledPIDFConstants;
 import frc.robot.lib.drivers.CanDeviceId;
 import frc.robot.lib.swerve.COTSTalonFXSwerveConstants;
 import frc.robot.lib.swerve.SwerveModuleConstants;
-import frc.robot.subsystems.vision.VisionDeviceConstants;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
@@ -36,6 +39,14 @@ public final class Constants {
 
 	public static final class Controllers {
 		public static final int DRIVER_CONTROLLER_PORT = 0;
+	}
+
+	public static final class Odometry {
+		public static final int OBSERVATION_BUFFER_SIZE = 50;
+		public static final Matrix<N2, N1> STATE_STD_DEVS = VecBuilder.fill(Math.pow(0.05, 1), Math.pow(0.05, 1)); // drive
+		public static final Matrix<N2, N1> LOCAL_MEASUREMENT_STD_DEVS = VecBuilder.fill(
+				Math.pow(0.02, 1), // vision
+				Math.pow(0.02, 1));
 	}
 
 	public static final class Drive {
@@ -137,48 +148,50 @@ public final class Constants {
 	}
 
 	public static final class Auto {
-		public static final PIDFConstants TRANSLATION_CONSTANTS = new PIDFConstants(
-			5.5,
-			0,
-			0,
-			1
-		);
-		public static final ProfiledPIDFConstants ROTATION_CONSTANTS = new ProfiledPIDFConstants(
-			4,
-			0, 
-			0, 
-			1, 
-			new TrapezoidProfile.Constraints(
-				Drive.MAX_SPEED, 
-				Drive.MAX_ACCEL
-			)
-		);
+		public static final PIDFConstants TRANSLATION_CONSTANTS = 
+			new PIDFConstants(5.5,0,0,1);
+		public static final ProfiledPIDFConstants ROTATION_CONSTANTS = 
+			new ProfiledPIDFConstants(4,0, 0, 1, 
+				new TrapezoidProfile.Constraints(
+					Drive.MAX_ROTATION_SPEED, 
+					Drive.MAX_ROTATION_ACCEL
+				)
+			);
 	}
 
 	public static final class Limelight { //TODO: this must be tuned to specific robot
-        public static VisionDeviceConstants LEFT_VISION_DEVICE = new VisionDeviceConstants();
-        public static VisionDeviceConstants RIGHT_VISION_DEVICE = new VisionDeviceConstants();
-        public static VisionDeviceConstants FRONT_VISION_DEVICE = new VisionDeviceConstants();
-        public static VisionDeviceConstants BACK_VISION_DEVICE = new VisionDeviceConstants();
+		public static final class VisionDeviceConstants {
+			public String kTableName = "limelight-front";//"limelight-c";
+			public Transform2d kRobotToCamera = new Transform2d();
+			public int kCameraId = 0;
+			public int kCameraResolutionWidth = 1600;
+			public int kCameraResolutionHeight = 1200;
+		}
+
+
+        public static VisionDeviceConstants L_CONSTANTS = new VisionDeviceConstants();
+        public static VisionDeviceConstants R_CONSTANTS = new VisionDeviceConstants();
+        public static VisionDeviceConstants F_CONSTANTS = new VisionDeviceConstants();
+        public static VisionDeviceConstants B_CONSTANTS = new VisionDeviceConstants();
 
         static {
-            LEFT_VISION_DEVICE.kTableName = "limelight-left";    
-            LEFT_VISION_DEVICE.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
+            L_CONSTANTS.kTableName = "limelight-left";    
+            L_CONSTANTS.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
                     new Translation2d(Units.Inches.of(10.5), Units.Inches.of(1.23)),
                     Rotation2d.fromDegrees(-90));
 
-            RIGHT_VISION_DEVICE.kTableName = "limelight-right";  
-            RIGHT_VISION_DEVICE.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
+            R_CONSTANTS.kTableName = "limelight-right";  
+            R_CONSTANTS.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
                     new Translation2d(Units.Inches.of(10.78), Units.Inches.of(2)),
                     Rotation2d.fromDegrees(90));
             
-            FRONT_VISION_DEVICE.kTableName = "limelight-front";
-            FRONT_VISION_DEVICE.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
+            F_CONSTANTS.kTableName = "limelight-front";
+            F_CONSTANTS.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
                     new Translation2d(Units.Inches.of(11.11), Units.Inches.of(4.28)),
                     Rotation2d.fromDegrees(0));
 
-            BACK_VISION_DEVICE.kTableName = "limelight-back";
-            BACK_VISION_DEVICE.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
+            B_CONSTANTS.kTableName = "limelight-back";
+            B_CONSTANTS.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
                     new Translation2d(Units.Inches.of(0), Units.Inches.of(-0.96)),
                     Rotation2d.fromDegrees(180));
         }

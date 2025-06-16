@@ -1,4 +1,4 @@
-package frc.robot.subsystems.vision;
+package frc.robot.lib.localization;
 
 import edu.wpi.first.networktables.DoubleArrayEntry;
 import edu.wpi.first.networktables.NetworkTable;

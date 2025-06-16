@@ -31,6 +31,12 @@ public class PIDHolonomicDriveController implements DriveController {
 		SmartDashboard.putData("debug", field);
     }
 
+    /**
+     * A drive controller that works with 2 {@link PIDVController}s for translation and one {@link ProfiledPIDVController} for rotation.
+     * @param translationConstants The {@link PIDFConstants} for the translation of the robot.
+     * @param rotationConstants The {@link ProfiledPIDFConstants} for the rotation of the robot.
+     * @param translationKA The acceleration feedforwards (useful for traversing sharp turns on a trajectory).
+     */
     public PIDHolonomicDriveController(PIDFConstants translationConstants, ProfiledPIDFConstants rotationConstants, double translationKA) {
         mXController = new PIDVController(translationConstants);
         mYController = new PIDVController(translationConstants);
@@ -63,7 +69,7 @@ public class PIDHolonomicDriveController implements DriveController {
 
     @Override
     public ChassisSpeeds getOutput() {
-        if (trajectory == null || currentPose == null || currentSpeeds == null || trajectory.getIsDone()) {
+        if (trajectory == null || currentPose == null || currentSpeeds == null || trajectory.isDone()) {
             return new ChassisSpeeds();
         }
 
@@ -116,7 +122,7 @@ public class PIDHolonomicDriveController implements DriveController {
     @Override
     public boolean isDone() {
         if (trajectory == null) return true;
-        if (trajectory.getIsDone()) {
+        if (trajectory.isDone()) {
             System.out.println("Done with trajectory, error: " + Math.hypot(mXController.error, mYController.error));
             return true;
         }

@@ -3,10 +3,12 @@ package frc.robot.subsystems.vision;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import frc.robot.Constants.Limelight.VisionDeviceConstants;
 import frc.robot.subsystems.drive.Pigeon;
 import frc.robot.RobotState;
 import frc.robot.RobotState.VisionUpdate;
 import frc.robot.lib.localization.FieldLayout;
+import frc.robot.lib.localization.LimelightHelpers;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -184,5 +186,16 @@ public class VisionDevice {
 		double latest_timestamp = 0.0;
 		List<VisionFrame> frames = new ArrayList<VisionFrame>();
 		boolean is_connected;
+	}
+
+	private static class VisionFrame {
+		double timestamp;
+		double[] frame_data;
+		double[] stdDevs;
+	
+		// For comparator
+		public double getTimestamp() {
+			return timestamp;
+		}
 	}
 }

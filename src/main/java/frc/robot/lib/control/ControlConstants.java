@@ -2,7 +2,13 @@ package frc.robot.lib.control;
 
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 
-public final class ControlConstants {
+/**
+ * A class containing controller constants.
+ */
+public class ControlConstants {
+    /**
+     * Constants used for a {@link PIDController}
+     */
     public static class PIDConstants {
         public final double kP;
         public final double kI;
@@ -14,6 +20,9 @@ public final class ControlConstants {
         }
     }
 
+    /**
+     * Constants used for a {@link PIDFController}
+     */
     public static class PIDFConstants {
         public final double kP;
         public final double kI;
@@ -32,7 +41,10 @@ public final class ControlConstants {
             this.kF = 0.0;
         }
     }
-
+    
+    /**
+     * Constants used for a {@link ProfiledPIDFController}
+     */
     public static class ProfiledPIDFConstants {
         public final double kP;
         public final double kI;

@@ -7,7 +7,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
  * Represents a 2D translation with interpolation support.
  */
 public class InterpolatingTranslation2d extends Translation2d implements Interpolable<InterpolatingTranslation2d> {
-    
     public InterpolatingTranslation2d() {
         super();
     }
