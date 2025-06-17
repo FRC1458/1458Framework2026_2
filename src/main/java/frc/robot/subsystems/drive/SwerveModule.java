@@ -21,15 +21,15 @@ import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.simulation.EncoderSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.Constants;
 import frc.robot.Robot;
 import frc.robot.lib.drivers.TalonFXManager;
-import frc.robot.lib.swerve.SwerveModuleConstants;
+import frc.robot.Constants;
+import frc.robot.Constants.Drive.Modules;
 import frc.robot.lib.util.Conversions;
 
 public class SwerveModule extends SubsystemBase {
     public final String name;
-    private final SwerveModuleConstants mConstants;
+    private final Constants.Drive.Modules mConstants;
 	private BaseStatusSignal[] mSignals = new BaseStatusSignal[4];
 
     private PeriodicIO mPeriodicIO = new PeriodicIO();
@@ -55,9 +55,9 @@ public class SwerveModule extends SubsystemBase {
     private DCMotorSim mDriveMotorSim;
 
 
-    public SwerveModule(String moduleName, SwerveModuleConstants constants, CANcoder canCoder) {
-        name = moduleName;
-        setName("Module " + moduleName);
+    public SwerveModule(Constants.Drive.Modules constants, CANcoder canCoder) {
+        name = constants.name();
+        setName("Module " + name);
         mConstants = constants;
 
         mAngleMotor = TalonFXManager.createMotor(name + " Angle Motor", constants.angleMotorID, "Angle");

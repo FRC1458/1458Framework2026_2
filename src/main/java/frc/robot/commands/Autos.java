@@ -1,6 +1,8 @@
 package frc.robot.commands;
 
-import frc.robot.subsystems.drive.Drive;
+import static frc.robot.subsystems.drive.Drive.mDrive;
+import static frc.robot.subsystems.drive.WheelTracker.mWheelTracker;
+import frc.robot.Robot;
 import frc.robot.lib.trajectory.RedTrajectory;
 import frc.robot.lib.trajectory.TrajectoryLoader;
 import frc.robot.lib.trajectory.RedTrajectory.TrajectoryType;
@@ -15,10 +17,16 @@ public final class Autos {
 	}
 
 	/** An auto that runs a single test trajectory. */
-	public static Command driveAuto(Drive drive) {
+	public static Command driveAuto() {
 		try {
 			RedTrajectory traj = TrajectoryLoader.loadAutoTrajectory(TrajectoryType.PATHPLANNER, "zisen").get();
-			return drive.trajectoryCommand(traj);
+			if (Robot.isSimulation()) {
+				return mDrive.runOnce(() -> mWheelTracker.resetPose(traj.getInitialState().pose))
+							.andThen(mDrive.prepareCommand(traj.getInitialState().speeds, 1))
+							.andThen(mDrive.trajectoryCommand(traj));
+			}
+			return mDrive.prepareCommand(traj.getInitialState().speeds, 1)
+						.andThen(mDrive.trajectoryCommand(traj));
 		} catch(Exception e) {
 			return Commands.none();
 		}

@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.Controllers;
@@ -17,7 +18,7 @@ import frc.robot.commands.Autos;
 import frc.robot.commands.ExampleCommand;
 import frc.robot.lib.util.interpolation.InterpolatingPose2d;
 import frc.robot.subsystems.ExampleSubsystem;
-import frc.robot.subsystems.drive.Drive;
+import static frc.robot.subsystems.drive.Drive.mDrive;
 
 /**
  * The methods in this class are called automatically corresponding to each mode, as described in
@@ -29,7 +30,6 @@ public class Robot extends TimedRobot {
 	private Command mAutoCommand;
 
 	private final ExampleSubsystem mExampleSubsystem = new ExampleSubsystem();
-	private final Drive mDrive = Drive.getInstance();
 
 	private final CommandXboxController mController =
 		new CommandXboxController(Controllers.DRIVER_CONTROLLER_PORT);
@@ -42,6 +42,9 @@ public class Robot extends TimedRobot {
 
 		RobotState.reset(Timer.getFPGATimestamp(), new InterpolatingPose2d());
 		RobotState.resetKalman();
+
+		var x = mExampleSubsystem;
+		var y = mDrive; // loads them in
 	}
 
 	/**
@@ -76,7 +79,7 @@ public class Robot extends TimedRobot {
 	@Override
 	public void autonomousInit() {
 		RobotState.setAlliance(DriverStation.getAlliance());
-		mAutoCommand = Autos.driveAuto(mDrive);
+		mAutoCommand = Autos.driveAuto();
 
 		if (mAutoCommand != null) {
 			mAutoCommand.schedule();
@@ -107,7 +110,7 @@ public class Robot extends TimedRobot {
 
 		mController.b().whileTrue(mExampleSubsystem.exampleMethodCommand());
 		mDrive.setDefaultCommand(mDrive.teleopCommand(mController::getLeftY, mController::getLeftX, mController::getRightY));
-	
+		mController.a().onTrue(Commands.runOnce(() -> DriverStationSim.setAllianceStationId(AllianceStationID.Blue1)));
 	}
 
 	/** This function is called periodically during operator control. */

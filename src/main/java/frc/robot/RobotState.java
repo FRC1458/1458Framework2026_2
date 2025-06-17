@@ -3,7 +3,7 @@ package frc.robot;
 import java.util.Map;
 import java.util.Optional;
 
-import frc.robot.subsystems.drive.Drive;
+import static frc.robot.subsystems.drive.Drive.mDrive;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.estimator.ExtendedKalmanFilter;
@@ -117,7 +117,7 @@ public class RobotState {
 			mKalmanFilter.setXhat(1, fieldToOdom.getY());
 			mLatestVisionUpdate = Optional.ofNullable(update);
 
-			Drive.getInstance().setOdometry(new Pose2d(fieldToOdom, getLatestOdomToVehicle().getValue().getRotation()));
+			mDrive.setOdometry(new Pose2d(fieldToOdom, getLatestOdomToVehicle().getValue().getRotation()));
 		} else {
 			double visionTimestamp = mLatestVisionUpdate.get().mTimestamp;
 			mLastTimestamp = mLatestVisionUpdate.get().mTimestamp;

@@ -25,12 +25,7 @@ import frc.robot.lib.swerve.COTSTalonFXSwerveConstants;
 import frc.robot.lib.swerve.SwerveModuleConstants;
 
 /**
- * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
- * constants. This class should not be used for any other purpose. All constants should be declared
- * globally (i.e. public static). Do not put anything functional in this class.
- *
- * <p>It is advised to statically import this class (or one of its inner classes) wherever the
- * constants are needed, to reduce verbosity.
+ * All constants belong here.
  */
 public final class Constants {
 	public static final double DT = 0.02;
@@ -68,10 +63,10 @@ public final class Constants {
 		public static final double DRIVE_GEAR_RATIO = SWERVE_MODULE_TYPE.driveGearRatio;
         public static final double ANGLE_GEAR_RATIO = SWERVE_MODULE_TYPE.angleGearRatio;
 
-		public static final double MAX_SPEED = Units.MetersPerSecond.of(4.0).in(Units.MetersPerSecond);
-		public static final double MAX_ACCEL = Units.MetersPerSecondPerSecond.of(3.0).in(Units.MetersPerSecondPerSecond);
-		public static final double MAX_ROTATION_SPEED = Units.DegreesPerSecond.of(540.0).in(Units.RadiansPerSecond);
-		public static final double MAX_ROTATION_ACCEL = Units.DegreesPerSecondPerSecond.of(720.0).in(Units.RadiansPerSecondPerSecond);
+		public static final double MAX_SPEED = 4.0;
+		public static final double MAX_ACCEL = 3.0;
+		public static final double MAX_ROTATION_SPEED = 540.0;
+		public static final double MAX_ROTATION_ACCEL = 720.0;
 
 		public static final int ANGLE_CURRENT_LIMIT = 20;
         public static final int ANGLE_CURRENT_THRESHOLD = 30;
@@ -95,121 +90,121 @@ public final class Constants {
 
 		public static final boolean INVERT_GYRO = false;
 
-		public static final class Modules {
-			/* Module Specific Constants */
-			/* Front Left Module - Module 0 */
-			public static final class FrontLeft { //TODO: This must be tuned to specific robot
-				public static final int DRIVE_MOTOR_ID = 8;
-				public static final int ANGLE_MOTOR_ID = 10;
-				public static final int CANCODER_ID = 7;
-				public static final Rotation2d ANGLE_OFFSET = Rotation2d.fromRotations(0.142334);
-				public static final boolean IS_DRIVE_INVERTED = true;
-				public static final boolean IS_ANGLE_INVERTED = false;
-				public static final SwerveModuleConstants CONSTANTS = 
-					new SwerveModuleConstants(DRIVE_MOTOR_ID, ANGLE_MOTOR_ID, CANCODER_ID, ANGLE_OFFSET, IS_DRIVE_INVERTED, IS_ANGLE_INVERTED);
-			}
-
-			/* Front Right Module - Module 1 */
-			public static final class FrontRight { //TODO: This must be tuned to specific robot
-				public static final int DRIVE_MOTOR_ID = 9;
-				public static final int ANGLE_MOTOR_ID = 11;
-				public static final int CANCODER_ID = 6;
-				public static final boolean IS_DRIVE_INVERTED = true;
-				public static final boolean IS_ANGLE_INVERTED = false;
-				public static final Rotation2d ANGLE_OFFSET = Rotation2d.fromRotations(0.427246);
-				public static final SwerveModuleConstants CONSTANTS = 
-					new SwerveModuleConstants(DRIVE_MOTOR_ID, ANGLE_MOTOR_ID, CANCODER_ID, ANGLE_OFFSET, IS_DRIVE_INVERTED, IS_ANGLE_INVERTED);
-			}
+		public static enum Modules {
+			/** Module 0 */
+			FRONT_LEFT ( 
+				8, 10, 7, Rotation2d.fromRotations(0.142334), true, false),
+			/** Module 1 */
+			FRONT_RIGHT ( 
+				9, 11, 6, Rotation2d.fromRotations(0.427246), true, false),
+			/** Module 2 */
+			BACK_LEFT ( 
+				3, 5, 0, Rotation2d.fromRotations(0.174316), true, false),
+			/** Module 3 */
+			BACK_RIGHT ( 
+				4, 2, 1, Rotation2d.fromRotations(0.413330), false, false);
 			
-			/* Back Left Module - Module 2 */
-			public static final class BackLeft { //TODO: This must be tuned to specific robot
-				public static final int DRIVE_MOTOR_ID = 3;
-				public static final int ANGLE_MOTOR_ID = 5;
-				public static final int CANCODER_ID = 0;
-				public static final boolean IS_DRIVE_INVERTED = true;
-				public static final boolean IS_ANGLE_INVERTED = false;
-				public static final Rotation2d ANGLE_OFFSET = Rotation2d.fromRotations(0.174316);
-				public static final SwerveModuleConstants CONSTANTS = 
-					new SwerveModuleConstants(DRIVE_MOTOR_ID, ANGLE_MOTOR_ID, CANCODER_ID, ANGLE_OFFSET, IS_DRIVE_INVERTED, IS_ANGLE_INVERTED);
-			}
-
-			/* Back Right Module - Module 3 */
-			public static final class BackRight { //TODO: This must be tuned to specific robot
-				public static final int DRIVE_MOTOR_ID = 4;
-				public static final int ANGLE_MOTOR_ID = 2;
-				public static final int CANCODER_ID = 1;
-				public static final boolean IS_DRIVE_INVERTED = false;
-				public static final boolean IS_ANGLE_INVERTED = false;
-				public static final Rotation2d ANGLE_OFFSET = Rotation2d.fromRotations(0.413330);
-				public static final SwerveModuleConstants CONSTANTS =
-					new SwerveModuleConstants(DRIVE_MOTOR_ID, ANGLE_MOTOR_ID, CANCODER_ID, ANGLE_OFFSET, IS_DRIVE_INVERTED, IS_ANGLE_INVERTED);
+			public final int driveMotorID;
+			public final int angleMotorID;
+			public final int cancoderID;
+			public final Rotation2d angleOffset;
+			public final boolean driveInvert;
+			public final boolean angleInvert;
+		
+			/**
+			 * Swerve Module Constants to be used when creating swerve modules.
+			 * @param driveMotorID
+			 * @param angleMotorID
+			 * @param canCoderID
+			 * @param angleOffset
+			 */
+			private Modules(int driveMotorID, int angleMotorID, int canCoderID, Rotation2d angleOffset, boolean driveInvert, boolean angleInvert) {
+				this.driveMotorID = driveMotorID;
+				this.angleMotorID = angleMotorID;
+				this.cancoderID = canCoderID;
+				this.angleOffset = angleOffset;
+				this.driveInvert = driveInvert;
+				this.angleInvert = angleInvert;
 			}
 		}
 	}
 
 	public static final class Auto {
 		public static final PIDFConstants TRANSLATION_CONSTANTS = 
-			new PIDFConstants(5.5,0,0,1);
+			new PIDFConstants(5.5,0.0,0.0,1.0);
 		public static final ProfiledPIDFConstants ROTATION_CONSTANTS = 
-			new ProfiledPIDFConstants(4,0, 0, 1, 
+			new ProfiledPIDFConstants(4.0,0.0, 0.0, 1.0, 
 				new TrapezoidProfile.Constraints(
 					Drive.MAX_ROTATION_SPEED, 
-					Drive.MAX_ROTATION_ACCEL
-				)
-			);
+					Drive.MAX_ROTATION_ACCEL));
+		public static final double ACCELERATION_CONSTANT = 0;
 	}
 
 	public static final class Limelight { //TODO: this must be tuned to specific robot
-		public static final class VisionDeviceConstants {
-			public String kTableName = "limelight-front";//"limelight-c";
-			public Transform2d kRobotToCamera = new Transform2d();
-			public int kCameraId = 0;
-			public int kCameraResolutionWidth = 1600;
-			public int kCameraResolutionHeight = 1200;
-		}
-
-
-        public static VisionDeviceConstants L_CONSTANTS = new VisionDeviceConstants();
-        public static VisionDeviceConstants R_CONSTANTS = new VisionDeviceConstants();
-        public static VisionDeviceConstants F_CONSTANTS = new VisionDeviceConstants();
-        public static VisionDeviceConstants B_CONSTANTS = new VisionDeviceConstants();
-
-        static {
-            L_CONSTANTS.kTableName = "limelight-left";    
-            L_CONSTANTS.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
-                    new Translation2d(Units.Inches.of(10.5), Units.Inches.of(1.23)),
-                    Rotation2d.fromDegrees(-90));
-
-            R_CONSTANTS.kTableName = "limelight-right";  
-            R_CONSTANTS.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
+		public static enum VisionDeviceConstants {
+			L_CONSTANTS (
+				"limelight-left",
+				new Transform2d(
+					new Translation2d(Units.Inches.of(10.5), Units.Inches.of(1.23)),
+					Rotation2d.fromDegrees(-90)),
+				0, 1600, 1200),
+			
+			R_CONSTANTS (
+				"limelight-right",
+				new Transform2d(
                     new Translation2d(Units.Inches.of(10.78), Units.Inches.of(2)),
-                    Rotation2d.fromDegrees(90));
-            
-            F_CONSTANTS.kTableName = "limelight-front";
-            F_CONSTANTS.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
-                    new Translation2d(Units.Inches.of(11.11), Units.Inches.of(4.28)),
-                    Rotation2d.fromDegrees(0));
+                    Rotation2d.fromDegrees(90)),
+				0, 1600, 1200),
 
-            B_CONSTANTS.kTableName = "limelight-back";
-            B_CONSTANTS.kRobotToCamera = new edu.wpi.first.math.geometry.Transform2d(
-                    new Translation2d(Units.Inches.of(0), Units.Inches.of(-0.96)),
-                    Rotation2d.fromDegrees(180));
-        }
+			F_CONSTANTS (
+				"limelight-front",
+				new Transform2d(
+					new Translation2d(Units.Inches.of(11.11), Units.Inches.of(4.28)),
+					Rotation2d.fromDegrees(0)),
+				0, 1600, 1200),
 
+			B_CONSTANTS (
+				"limelight-back",
+				new Transform2d(
+					new Translation2d(Units.Inches.of(0), Units.Inches.of(-0.96)),
+					Rotation2d.fromDegrees(180)),
+				0, 1600, 1200);
+
+			public final String tableName;
+			public final Transform2d robotToCamera;
+			public final int cameraId;
+			public final int cameraResolutionWidth;
+			public final int cameraResolutionHeight;
+			private VisionDeviceConstants(
+				String tableName, 
+				Transform2d robotToCamera,
+				int cameraId, 
+				int cameraResolutionWidth,
+				int cameraResolutionHeight
+			) {
+				this.tableName = tableName;
+				this.robotToCamera = robotToCamera;
+				this.cameraId = cameraId;
+				this.cameraResolutionWidth = cameraResolutionWidth;
+				this.cameraResolutionHeight = cameraResolutionHeight;
+			}
+		}
     }
 
-	public static final class Ports {
-		public static final CanDeviceId FL_CANCODER = new CanDeviceId(7, "CV");
-	
-		public static final CanDeviceId FR_CANCODER = new CanDeviceId(6, "CV");
-	
-		public static final CanDeviceId BL_CANCODER = new CanDeviceId(14, "CV");
-	
-		public static final CanDeviceId BR_CANCODER = new CanDeviceId(1, "CV");
-	
-		public static final int PIGEON = 60; // TODO: this must be tuned to the specific robot
-		
-		public static final CanDeviceId LEDS = new CanDeviceId(21, "CV");
+	public static enum Ports { // TODO: this must be tuned to the specific robot
+		FL_CANCODER (7, "CV"),
+		FR_CANCODER (6, "CV"),
+		BL_CANCODER (14, "CV"),
+		BR_CANCODER (1, "CV"),
+		LEDS (21, "CV"),
+		PIGEON (60, "CV");
+
+		public final int id;
+		public final String bus;
+		private Ports(int id, String bus) {
+			this.id = id;
+			this.bus = bus;
+		}
 	}	
 	
 	public static final class Pathplanner {
@@ -218,7 +213,7 @@ public final class Constants {
 			try {
 				config = RobotConfig.fromGUISettings();
 			} catch (Exception e) {
-				DriverStation.reportError("Pathplanner configs failed to load", e.getStackTrace());
+				DriverStation.reportError("Pathplanner configs failed to load ", e.getStackTrace());
 			}
 		}
 		public static final PathConstraints GLOBAL_CONSTRAINTS = 

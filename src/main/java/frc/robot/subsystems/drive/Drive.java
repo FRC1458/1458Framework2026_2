@@ -42,24 +42,21 @@ import frc.robot.lib.trajectory.RedTrajectory;
 import frc.robot.lib.util.Conversions;
 import frc.robot.lib.util.Util;
 import frc.robot.lib.util.interpolation.InterpolatingPose2d;
-import frc.robot.subsystems.Cancoders;
-import frc.robot.subsystems.WheelTracker;
+
+import static frc.robot.Cancoders.mCanCoders;
+import static frc.robot.subsystems.drive.Pigeon.mPigeon;
+import static frc.robot.subsystems.drive.WheelTracker.mWheelTracker;
 
 public class Drive extends IDrive {
-    private static Drive mInstance;
-    public static Drive getInstance() {
-        if (mInstance == null) {
-            mInstance = new Drive();
-        }
-        return mInstance;
-    }
+    public static final Drive mDrive = new Drive();
 
     private State mState = State.TELEOP;
     private static enum State {
         DISABLED,
         TELEOP,
         PATH_FOLLOWING,
-        X_LOCK
+        X_LOCK,
+        PREPARING
     }
 
     private PeriodicIO mPeriodicIO;
@@ -72,9 +69,7 @@ public class Drive extends IDrive {
         public Twist2d predictedVelocity;
     }
 
-    private Cancoders mCancoders;
-    private SwerveModule[] mSwerveModules;
-    private WheelTracker mWheelTracker;
+    public SwerveModule[] mSwerveModules;
 
     private DriveController mDriveController;
     private Pathfinder mPathFinder;
@@ -94,24 +89,23 @@ public class Drive extends IDrive {
         .getStructTopic("SmartDashboard/Drive/ChassisSpeeds", ChassisSpeeds.struct).publish();
 
     private Drive() {
-        mCancoders = Cancoders.getInstance();
         mPeriodicIO = new PeriodicIO();
         mSwerveModules = new SwerveModule[] {
             new SwerveModule(
-                "FL", Constants.Drive.Modules.FrontLeft.CONSTANTS, mCancoders.getFrontLeft()), 
+                Constants.Drive.Modules.FRONT_LEFT, mCanCoders.getFrontLeft()), 
             new SwerveModule(
-                "FR", Constants.Drive.Modules.FrontRight.CONSTANTS, mCancoders.getFrontRight()), 
+                Constants.Drive.Modules.FRONT_RIGHT, mCanCoders.getFrontRight()), 
             new SwerveModule(
-                "BL", Constants.Drive.Modules.BackLeft.CONSTANTS, mCancoders.getBackLeft()), 
+                Constants.Drive.Modules.BACK_LEFT, mCanCoders.getBackLeft()), 
             new SwerveModule(   
-                "BR", Constants.Drive.Modules.BackRight.CONSTANTS, mCancoders.getBackRight())
+                Constants.Drive.Modules.BACK_RIGHT, mCanCoders.getBackRight())
         };
         mKinematics = new SwerveDriveKinematics(Constants.Drive.MODULE_LOCATIONS);
         mAccelLimiter = new SlewRateLimiter(Constants.Drive.MAX_ACCEL);
         mRotationAccelLimiter = new SlewRateLimiter(Constants.Drive.MAX_ROTATION_ACCEL);
         mWheelTracker = new WheelTracker(mSwerveModules);
         mDriveController = new PIDHolonomicDriveController(
-            Constants.Auto.TRANSLATION_CONSTANTS, Constants.Auto.ROTATION_CONSTANTS, 0);
+            Constants.Auto.TRANSLATION_CONSTANTS, Constants.Auto.ROTATION_CONSTANTS, Constants.Auto.ACCELERATION_CONSTANT);
         mPathFinder = new LocalADStar();
         SmartDashboard.putData(this);
     }
@@ -124,13 +118,13 @@ public class Drive extends IDrive {
         SwerveModuleState[] moduleStates = getModuleStates();
 		Twist2d twist_vel = Conversions.toTwist2d(mKinematics.toChassisSpeeds(moduleStates));
 		Translation2d translation_vel = new Translation2d(twist_vel.dx, twist_vel.dy);
-		translation_vel = translation_vel.rotateBy(Pigeon.getInstance().getYaw());
+		translation_vel = translation_vel.rotateBy(mPigeon.getYaw());
         
         Twist2d predictedTwistVelocity = Conversions.toTwist2d(mPeriodicIO.targetSpeeds);
 		mPeriodicIO.predictedVelocity =
             Util.logMap(Util.expMap(
                 predictedTwistVelocity).rotateBy(
-                    Pigeon.getInstance().getYaw()));
+                    mPigeon.getYaw()));
         
 		mPeriodicIO.measuredVelocity = new Twist2d(
             translation_vel.getX(),
@@ -148,10 +142,8 @@ public class Drive extends IDrive {
     public void periodic() {        
         updateOdometry();
         switch (mState) {
-            case DISABLED:
-                setTargetSpeeds(new ChassisSpeeds());
-                break;
             case TELEOP:
+                setModuleTargetStates(mPeriodicIO.targetSpeeds);
                 break;    
             case PATH_FOLLOWING:
                 mDriveController.setInput(
@@ -161,11 +153,16 @@ public class Drive extends IDrive {
                     )
                 );
                 setTargetSpeeds(mDriveController.getOutput());
+                setModuleTargetStates(mPeriodicIO.targetSpeeds);
+                break;
+            case X_LOCK:
+                break;
+            case PREPARING:
                 break;
             default:
                 setTargetSpeeds(new ChassisSpeeds());
+                setModuleTargetStates(mPeriodicIO.targetSpeeds);
         }
-        setModuleTargetStates(mPeriodicIO.targetSpeeds);
         for (int i = 0; i < mSwerveModules.length; i++) {
             SwerveModule swerveModule = mSwerveModules[i];
             SwerveModuleState state = mPeriodicIO.targetModuleStates[i];
@@ -189,7 +186,7 @@ public class Drive extends IDrive {
 
     @Override
     public void simulationPeriodic() {
-        Pigeon.getInstance().setSimAngularVelocity(mPeriodicIO.targetSpeeds.omegaRadiansPerSecond);
+        mPigeon.setSimAngularVelocity(mPeriodicIO.targetSpeeds.omegaRadiansPerSecond);
     }
 
     @Override
@@ -247,6 +244,13 @@ public class Drive extends IDrive {
     public Command xLockCommand() {
         return Commands.runOnce(this::setXLock);
     }
+
+    /**
+     * A command that aligns the swerves prior to some precise movement.
+     */
+    public Command prepareCommand(ChassisSpeeds speeds, double duration) {
+        return Commands.runOnce(() -> setPreparing(speeds)).andThen(Commands.waitSeconds(duration));
+    }
     
     @Override
     protected void setTeleop() {
@@ -272,6 +276,11 @@ public class Drive extends IDrive {
             new SwerveModuleState(0.0, Rotation2d.fromDegrees(45)),
             new SwerveModuleState(0.0, Rotation2d.fromDegrees(-45))
         };
+    }
+
+    private void setPreparing(ChassisSpeeds speeds) {
+        this.mState = State.PREPARING;
+        setModuleTargetStatesPreparing(speeds);
     }
 
     @Override
@@ -313,6 +322,18 @@ public class Drive extends IDrive {
             rawTargetModuleStates,
             Constants.Drive.MAX_SPEED
         );
+        mPeriodicIO.targetModuleStates = rawTargetModuleStates;
+    }
+
+    protected void setModuleTargetStatesPreparing(ChassisSpeeds speeds) {
+        SwerveModuleState[] rawTargetModuleStates = mKinematics.toSwerveModuleStates(mPeriodicIO.targetSpeeds);
+        SwerveDriveKinematics.desaturateWheelSpeeds(
+            rawTargetModuleStates,
+            Constants.Drive.MAX_SPEED
+        );
+        for (SwerveModuleState swerveModuleState : rawTargetModuleStates) {
+            swerveModuleState.speedMetersPerSecond = 0.0;
+        }
         mPeriodicIO.targetModuleStates = rawTargetModuleStates;
     }
 

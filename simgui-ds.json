@@ -21,12 +21,13 @@
           "keyRate": 0.009999999776482582
         },
         {},
+        {},
         {
           "decKey": 69,
           "incKey": 81
         }
       ],
-      "axisCount": 5,
+      "axisCount": 6,
       "buttonCount": 4,
       "buttonKeys": [
         90,

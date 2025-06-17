@@ -10,14 +10,7 @@ import java.util.List;
 
 public class VisionDeviceManager extends SubsystemBase {
     public static boolean enabled;
-	private static VisionDeviceManager mInstance;
-
-	public static VisionDeviceManager getInstance() {
-		if (mInstance == null && enabled) {
-			mInstance = new VisionDeviceManager();
-		}
-		return mInstance;
-	}
+	public static VisionDeviceManager mVisionDeviceManager;
 
 	private VisionDevice mLeftCamera;
 	private VisionDevice mRightCamera;
@@ -36,10 +29,10 @@ public class VisionDeviceManager extends SubsystemBase {
 	private static boolean disable_vision = false;
 
 	private VisionDeviceManager() {
-		mLeftCamera = new VisionDevice(Constants.Limelight.L_CONSTANTS);
-		mRightCamera = new VisionDevice(Constants.Limelight.R_CONSTANTS);
-		mFrontCamera = new VisionDevice(Constants.Limelight.F_CONSTANTS);
-		mBackCamera = new VisionDevice(Constants.Limelight.B_CONSTANTS);
+		mLeftCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.L_CONSTANTS);
+		mRightCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.R_CONSTANTS);
+		mFrontCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.F_CONSTANTS);
+		mBackCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.B_CONSTANTS);
 		mAllCameras = List.of(mLeftCamera, mRightCamera, mFrontCamera, mBackCamera);
 	}
 

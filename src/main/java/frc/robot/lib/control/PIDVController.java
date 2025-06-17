@@ -3,7 +3,6 @@ package frc.robot.lib.control;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.lib.control.ControlConstants.*;
 
 public class PIDVController implements Controller<Pair<Double, Double>, Double> {
@@ -81,7 +80,7 @@ public class PIDVController implements Controller<Pair<Double, Double>, Double> 
 
         integral += error * dt;
 
-        double derivative = -velocity;
+        double derivative = feedforward - velocity;
 
         return mConstants.kP * error
              + mConstants.kI * integral

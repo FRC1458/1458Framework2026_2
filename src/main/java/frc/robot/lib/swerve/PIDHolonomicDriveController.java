@@ -18,7 +18,7 @@ public class PIDHolonomicDriveController implements DriveController {
     private final PIDVController mXController;
     private final PIDVController mYController;
     private final ProfiledPIDVController mThetaController;
-    private double translationKA;
+    private double accelConstant;
 
     private RedTrajectory mTrajectory;
     private Pose2d currentPose;
@@ -35,9 +35,9 @@ public class PIDHolonomicDriveController implements DriveController {
      * A drive controller that works with 2 {@link PIDVController}s for translation and one {@link ProfiledPIDVController} for rotation.
      * @param translationConstants The {@link PIDFConstants} for the translation of the robot.
      * @param rotationConstants The {@link ProfiledPIDFConstants} for the rotation of the robot.
-     * @param translationKA The acceleration feedforwards (useful for traversing sharp turns on a trajectory).
+     * @param accelConstant The acceleration feedforwards (useful for traversing sharp turns on a trajectory).
      */
-    public PIDHolonomicDriveController(PIDFConstants translationConstants, ProfiledPIDFConstants rotationConstants, double translationKA) {
+    public PIDHolonomicDriveController(PIDFConstants translationConstants, ProfiledPIDFConstants rotationConstants, double accelConstant) {
         mXController = new PIDVController(translationConstants);
         mYController = new PIDVController(translationConstants);
 
@@ -46,7 +46,7 @@ public class PIDHolonomicDriveController implements DriveController {
                 
         mThetaController.enableContinuousInput(-Math.PI, Math.PI);
 
-        this.translationKA = translationKA;
+        this.accelConstant = accelConstant;
 
         mTimer = new Timer();
     }
@@ -105,7 +105,9 @@ public class PIDHolonomicDriveController implements DriveController {
 
         mThetaController.setTarget(targetState.pose.getRotation().getRadians());
         mThetaController.setFeedforward(targetState.speeds.omegaRadiansPerSecond);
-        mThetaController.setInput(new Pair<Double, Double>(currentPose.getRotation().getRadians(), currentSpeeds.omegaRadiansPerSecond));
+        mThetaController.setInput(
+            new Pair<Double, Double>(
+                currentPose.getRotation().getRadians(), currentSpeeds.omegaRadiansPerSecond));
 
         double rotation = mThetaController.getOutput();
 
@@ -113,8 +115,8 @@ public class PIDHolonomicDriveController implements DriveController {
 		SmartDashboard.putData("debug", field);
 
         return ChassisSpeeds.fromFieldRelativeSpeeds(
-                vx + xAccelFF * translationKA,
-                vy + yAccelFF * translationKA,
+                vx + xAccelFF * accelConstant,
+                vy + yAccelFF * accelConstant,
                 rotation,
                 currentPose.getRotation());
     }

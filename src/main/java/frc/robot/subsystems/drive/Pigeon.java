@@ -18,15 +18,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 
 public class Pigeon extends SubsystemBase {
-	private static Pigeon mInstance;
-
-	public static Pigeon getInstance() {
-		if (mInstance == null) {
-			mInstance = new Pigeon(Ports.PIGEON);
-		}
-		return mInstance;
-	}
-
+	public static final Pigeon mPigeon = new Pigeon(Ports.PIGEON);
 	private final Pigeon2 mGyro;
 
 	// Configs
@@ -37,8 +29,8 @@ public class Pigeon extends SubsystemBase {
 
 	private double simAngularVelocity = 0.0;
 
-	private Pigeon(int port) {
-		mGyro = new Pigeon2(port, "CV");
+	private Pigeon(Constants.Ports constants) {
+		mGyro = new Pigeon2(constants.id, constants.bus);
 		mGyro.getConfigurator().apply(new Pigeon2Configuration());
 	}
 

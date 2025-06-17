@@ -75,7 +75,7 @@ public class ProfiledPIDVController implements Controller<Pair<Double, Double>, 
             : target - position;
 
         integral += error * dt;
-        double derivative = -velocity;
+        double derivative = feedforward - velocity;
 
 
         return mConstants.kP * error

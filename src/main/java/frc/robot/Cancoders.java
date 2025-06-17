@@ -1,4 +1,4 @@
-package frc.robot.subsystems;
+package frc.robot;
 
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.StatusSignal;
@@ -13,33 +13,27 @@ import edu.wpi.first.wpilibj.Timer;
 import java.util.Optional;
 
 public class Cancoders {
-	private static Cancoders mInstance;
-	public static Cancoders getInstance() {
-		if (mInstance == null) {
-			mInstance = new Cancoders();
-		}
-		return mInstance;
-	}
+	public static final Cancoders mCanCoders = new Cancoders();
 
 	private final CANcoder mFrontLeft;
 	private final CANcoder mFrontRight;
 	private final CANcoder mBackLeft;
 	private final CANcoder mBackRight;
 
-	private final CanTimestampObserver mFrontRightObserver;
-	private final CanTimestampObserver mFrontLeftObserver;
-	private final CanTimestampObserver mBackLeftObserver;
-	private final CanTimestampObserver mBackRightObserver;
+	private final CanTimeObserver mFrontRightObserver;
+	private final CanTimeObserver mFrontLeftObserver;
+	private final CanTimeObserver mBackLeftObserver;
+	private final CanTimeObserver mBackRightObserver;
 
-	private static final double kBootUpErrorAllowanceTime = 10.0;
+	private static final double BOOT_UP_ERROR_ALLOWANCE_TIME = 10.0;
 
-	private static class CanTimestampObserver {
+	private static class CanTimeObserver {
 		private final CANcoder cancoder;
 		private Optional<Double> lastTimestamp = Optional.empty();
 		private int validUpdates = 0;
 		private static final int kRequiredValidTimestamps = 10;
 
-		public CanTimestampObserver(CANcoder cancoder) {
+		public CanTimeObserver(CANcoder cancoder) {
 			this.cancoder = cancoder;
 		}
 
@@ -58,8 +52,8 @@ public class Cancoders {
 		}
 	}
 
-	private CANcoder build(CanDeviceId canDeviceId) {
-		CANcoder thisCancoder = new CANcoder(canDeviceId.getDeviceNumber(), canDeviceId.getBus());
+	private CANcoder build(Constants.Ports canDeviceId) {
+		CANcoder thisCancoder = new CANcoder(canDeviceId.id, canDeviceId.bus);
 		CANcoderConfigurator configurator = thisCancoder.getConfigurator();
 		CANcoderConfiguration canCoderConfig = new CANcoderConfiguration();
 
@@ -72,14 +66,14 @@ public class Cancoders {
 		boolean goodInit = false;
 		int attempt = 1;
 		while (!goodInit && !timedOut && attempt < 20) {
-			System.out.println("Initing CANCoder " + canDeviceId.getDeviceNumber() + " / attempt: " + attempt + " / "
+			System.out.println("Initing CANCoder " + canDeviceId.id + " / attempt: " + attempt + " / "
 					+ (Timer.getFPGATimestamp() - startTime) + " seconds elapsed");
 			StatusCode settingsCode = configurator.apply(canCoderConfig);
 			StatusCode sensorCode = thisCancoder.getAbsolutePosition().setUpdateFrequency(20);
 
 			goodInit = settingsCode == StatusCode.OK && sensorCode == StatusCode.OK;
 
-			timedOut = (Timer.getFPGATimestamp()) - startTime >= kBootUpErrorAllowanceTime;
+			timedOut = (Timer.getFPGATimestamp()) - startTime >= BOOT_UP_ERROR_ALLOWANCE_TIME;
 			attempt++;
 		}
 
@@ -87,17 +81,17 @@ public class Cancoders {
 	}
 
 	private Cancoders() {
-		mFrontLeft = build(Ports.FL_CANCODER);
-		mFrontLeftObserver = new CanTimestampObserver(mFrontLeft);
+		mFrontLeft = build(Constants.Ports.FL_CANCODER);
+		mFrontLeftObserver = new CanTimeObserver(mFrontLeft);
 
-		mFrontRight = build(Ports.FR_CANCODER);
-		mFrontRightObserver = new CanTimestampObserver(mFrontRight);
+		mFrontRight = build(Constants.Ports.FR_CANCODER);
+		mFrontRightObserver = new CanTimeObserver(mFrontRight);
 
-		mBackLeft = build(Ports.BL_CANCODER);
-		mBackLeftObserver = new CanTimestampObserver(mBackLeft);
+		mBackLeft = build(Constants.Ports.BL_CANCODER);
+		mBackLeftObserver = new CanTimeObserver(mBackLeft);
 
-		mBackRight = build(Ports.BR_CANCODER);
-		mBackRightObserver = new CanTimestampObserver(mBackRight);
+		mBackRight = build(Constants.Ports.BR_CANCODER);
+		mBackRightObserver = new CanTimeObserver(mBackRight);
 	}
 
 	public boolean allHaveBeenInitialized() {

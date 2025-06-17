@@ -172,6 +172,18 @@ public class RedTrajectory {
     }
 
     /**
+     * Creates a {@code RedTrajectory} from a PathPlanner trajectory. See {@link TrajectoryLoader}.
+     * @param traj The PathPlanner trajectory.
+     * @param flipForAlliance Whether to flip the trajectory based on the current alliance.
+     */
+    public RedTrajectory(PathPlannerTrajectory traj, boolean flipForAlliance, String name) {
+        mPathplannerTrajectory = traj;
+        this.type = TrajectoryType.PATHPLANNER;
+        this.flipped = flipForAlliance && RobotState.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
+        this.name = "PathPlannerTrajectory#" + name;
+    }
+
+    /**
      * Gets the initial state.
      * @return The state at the beginning of the trajectory.
      */
@@ -181,7 +193,7 @@ public class RedTrajectory {
                 new State(mChoreoTrajectory.getInitialSample(false).get());
             case PATHPLANNER ->
                 new State(mPathplannerTrajectory.getInitialState());
-            default->
+            default ->
                 new State();
         };
     }
@@ -244,15 +256,29 @@ public class RedTrajectory {
      * @return Whether the trajectory is done.
      */
     public boolean isDone() {
-        switch (type) {
-            case PATHPLANNER:
-                return mPathplannerTrajectory.getTotalTimeSeconds() <= progress;
-            case CHOREO:
-                return mChoreoTrajectory.getTotalTime() <= progress;
-            default:
-                return true;
-        }
+        return switch (type) {
+            case PATHPLANNER ->
+                mPathplannerTrajectory.getTotalTimeSeconds() <= progress;
+            case CHOREO ->
+                mChoreoTrajectory.getTotalTime() <= progress;
+            default -> true;
+        };
     }
+
+    /**
+     * Gets the total time of the trajectory.
+     * @return The total time.
+     */
+    public double getTotalTime() {
+        return switch (type) {
+            case PATHPLANNER ->
+                mPathplannerTrajectory.getTotalTimeSeconds();
+            case CHOREO ->
+                mChoreoTrajectory.getTotalTime();
+            default -> 0.0;
+        };
+    }
+
 
     /**
      * Gets the state at the timestamp.

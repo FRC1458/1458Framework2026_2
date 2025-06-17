@@ -4,7 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import frc.robot.Constants.Limelight.VisionDeviceConstants;
-import frc.robot.subsystems.drive.Pigeon;
+import frc.robot.Constants.Limelight.VisionDeviceConstants;
+
+import static frc.robot.subsystems.drive.Pigeon.mPigeon;
 import frc.robot.RobotState;
 import frc.robot.RobotState.VisionUpdate;
 import frc.robot.lib.localization.FieldLayout;
@@ -32,8 +34,6 @@ public class VisionDevice {
 	private final VisionDeviceConstants mConstants;
 	private PeriodicIO mPeriodicIO = new PeriodicIO();
 
-	private Pigeon mPigeon;
-
 	private NetworkTable mConfigTable;
 	private NetworkTable mOutputTable;
 	private NetworkTable mCalibTable;
@@ -50,14 +50,12 @@ public class VisionDevice {
 
 	public VisionDevice(VisionDeviceConstants constants) {
 		robotField = new Field2d();
-		SmartDashboard.putData("VisionDevice/" + constants.kTableName, robotField);
-
-		mPigeon = Pigeon.getInstance();
+		SmartDashboard.putData("VisionDevice/" + constants.tableName, robotField);
 
 		mConstants = constants;
-		mConfigTable = NetworkTableInstance.getDefault().getTable(mConstants.kTableName + "/configs");
-		mCalibTable = NetworkTableInstance.getDefault().getTable(mConstants.kTableName + "/calibration");
-		mOutputTable = NetworkTableInstance.getDefault().getTable(mConstants.kTableName);
+		mConfigTable = NetworkTableInstance.getDefault().getTable(mConstants.tableName + "/configs");
+		mCalibTable = NetworkTableInstance.getDefault().getTable(mConstants.tableName + "/calibration");
+		mOutputTable = NetworkTableInstance.getDefault().getTable(mConstants.tableName);
 
 		mVisible = mOutputTable
 				.getIntegerTopic("tv")
@@ -114,13 +112,13 @@ public class VisionDevice {
 			return;
 		}
 
-		LimelightHelpers.SetRobotOrientation(mConstants.kTableName, mPigeon.getYaw().getDegrees(), 0, 0, 0, 0, 0);
+		LimelightHelpers.SetRobotOrientation(mConstants.tableName, mPigeon.getYaw().getDegrees(), 0, 0, 0, 0, 0);
 
 		Pose2d botPose = new Pose2d(mt2Pose[0], mt2Pose[1], new Rotation2d(mt2Pose[5] * Math.PI / 180));
 		Vector<N2> stdDevsVec = VecBuilder.fill(stdDevs[6], stdDevs[7]);
 
 		robotField.setRobotPose(botPose);
-		Pose2d targetSpace_pose = LimelightHelpers.toPose2D(LimelightHelpers.getBotPose_TargetSpace(mConstants.kTableName));
+		Pose2d targetSpace_pose = LimelightHelpers.toPose2D(LimelightHelpers.getBotPose_TargetSpace(mConstants.tableName));
 		//Vector<N2> betterDevs = VecBuilder.fill(0.005 * targetSpace_pose.getX(), 0.005 * targetSpace_pose.getY());
 
 		RobotState.addVisionUpdate(
@@ -162,9 +160,9 @@ public class VisionDevice {
 		processFrames();
 
 		SmartDashboard.putNumber(
-				"Vision " + mConstants.kTableName + "/Last Update Timestamp Timestamp", mPeriodicIO.latest_timestamp);
-		SmartDashboard.putNumber("Vision " + mConstants.kTableName + "/N Queued Updates", mPeriodicIO.frames.size());
-		SmartDashboard.putBoolean("Vision " + mConstants.kTableName + "/is Connnected", mPeriodicIO.is_connected);
+				"Vision " + mConstants.tableName + "/Last Update Timestamp Timestamp", mPeriodicIO.latest_timestamp);
+		SmartDashboard.putNumber("Vision " + mConstants.tableName + "/N Queued Updates", mPeriodicIO.frames.size());
+		SmartDashboard.putBoolean("Vision " + mConstants.tableName + "/is Connnected", mPeriodicIO.is_connected);
 	}
 
 	public void captureCalibrationFrame() {
