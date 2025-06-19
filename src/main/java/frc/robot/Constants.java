@@ -1,10 +1,5 @@
 package frc.robot;
 
-import static edu.wpi.first.units.Units.Meters;
-
-import java.io.IOException;
-import org.json.simple.parser.ParseException;
-
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.path.PathConstraints;
 
@@ -17,12 +12,13 @@ import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.Units;
+import edu.wpi.first.units.VoltageUnit;
+import edu.wpi.first.units.measure.Velocity;
+import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.lib.control.ControlConstants.PIDFConstants;
 import frc.robot.lib.control.ControlConstants.ProfiledPIDFConstants;
-import frc.robot.lib.drivers.CanDeviceId;
 import frc.robot.lib.swerve.COTSTalonFXSwerveConstants;
-import frc.robot.lib.swerve.SwerveModuleConstants;
 
 /**
  * All constants belong here.
@@ -190,6 +186,18 @@ public final class Constants {
 			}
 		}
     }
+
+	public static final class Tuning {
+		public static final class AngleMotor {
+			public static final Velocity<VoltageUnit> RAMP_RATE = Units.Volts.of(1).per(Units.Second); 
+			public static final Voltage DYNAMIC_VOLTAGE = Units.Volts.of(7);
+		}
+
+		public static final class DriveMotor {
+			public static final Velocity<VoltageUnit> RAMP_RATE = Units.Volts.of(1).per(Units.Second); 
+			public static final Voltage DYNAMIC_VOLTAGE = Units.Volts.of(4);
+		}
+	}
 
 	public static enum Ports { // TODO: this must be tuned to the specific robot
 		FL_CANCODER (7, "CV"),

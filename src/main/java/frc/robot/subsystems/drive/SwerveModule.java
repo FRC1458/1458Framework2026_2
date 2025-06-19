@@ -3,6 +3,7 @@ package frc.robot.subsystems.drive;
 import static edu.wpi.first.units.Units.Volts;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.controls.*;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -15,19 +16,20 @@ import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.util.sendable.SendableBuilder;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
-import edu.wpi.first.wpilibj.simulation.EncoderSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.Robot;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.lib.drivers.TalonFXManager;
 import frc.robot.Constants;
-import frc.robot.Constants.Drive.Modules;
 import frc.robot.lib.util.Conversions;
+import frc.robot.subsystems.RedSubsystemBase;
 
-public class SwerveModule extends SubsystemBase {
+public class SwerveModule extends RedSubsystemBase {
     public final String name;
     private final Constants.Drive.Modules mConstants;
 	private BaseStatusSignal[] mSignals = new BaseStatusSignal[4];
@@ -47,13 +49,19 @@ public class SwerveModule extends SubsystemBase {
         ControlRequest driveRequest = new NeutralOut();
     }
 
+    private TuningType mTuningType = TuningType.NONE;
+    public static enum TuningType {
+        NONE,
+        ANGLE,
+        DRIVE
+    }
+
     private TalonFX mAngleMotor;
     private TalonFX mDriveMotor;
     private CANcoder mCanCoder;
     
     private DCMotorSim mAngleMotorSim;
     private DCMotorSim mDriveMotorSim;
-
 
     public SwerveModule(Constants.Drive.Modules constants, CANcoder canCoder) {
         name = constants.name();
@@ -91,7 +99,18 @@ public class SwerveModule extends SubsystemBase {
 
     @Override
     public void periodic() {
-        setVelocity(mPeriodicIO.targetState);
+        switch (mTuningType) {
+            case NONE:
+                setVelocity(mPeriodicIO.targetState);
+                break;
+            case ANGLE:
+                break;
+            case DRIVE:
+                break;
+            default:
+                setVelocity(mPeriodicIO.targetState);
+                break;
+        }
 
         mAngleMotor.setControl(mPeriodicIO.angleRequest);
         mDriveMotor.setControl(mPeriodicIO.driveRequest);
@@ -244,6 +263,10 @@ public class SwerveModule extends SubsystemBase {
 		return Conversions.rotationsToDegrees(mPeriodicIO.rotationPosition, Constants.Drive.ANGLE_GEAR_RATIO);
 	}
 
+    /**
+     * Gets the speed of the angle.
+     * @return The speed, in degrees per second.
+     */
     public double getModuleAngleSpeed() {
         return Units.RotationsPerSecond.of(mPeriodicIO.rotationVelocity).in(Units.DegreesPerSecond);
     }
@@ -254,6 +277,88 @@ public class SwerveModule extends SubsystemBase {
      */
     public BaseStatusSignal[] getUsedStatusSignals() {
 		return mSignals;
+	}
+    
+    /**
+     * The system identification routine for the angle motor.
+     * @return The angle motor routine.
+     */
+    public SysIdRoutine angleRoutine() {
+        return new SysIdRoutine(
+            new SysIdRoutine.Config(
+                Constants.Tuning.AngleMotor.RAMP_RATE,
+                Constants.Tuning.AngleMotor.DYNAMIC_VOLTAGE,
+                null,
+                state -> SignalLogger.writeString("/Sysid/Angle/State", state.toString())
+            ), 
+            new SysIdRoutine.Mechanism(
+                volts -> mPeriodicIO.angleRequest = new VoltageOut(volts), null, this));
+    }
+
+    /**
+     * The system identification routine for the drive motor.
+     * @return The drive motor routine.
+     */
+    public SysIdRoutine driveRoutine() {
+        return new SysIdRoutine(
+            new SysIdRoutine.Config(
+                Constants.Tuning.DriveMotor.RAMP_RATE,
+                Constants.Tuning.DriveMotor.DYNAMIC_VOLTAGE,
+                null,
+                state -> SignalLogger.writeString("/Sysid/Drive/State", state.toString())
+            ), 
+            new SysIdRoutine.Mechanism(
+                volts -> mPeriodicIO.driveRequest = new VoltageOut(volts), null, this));
+    }
+
+    /**
+     * The command to run a sysid routine of the specified type and direction.
+     * @param type The type of routine (DRIVE or ANGLE).
+     * @param direction The direction to run in.
+     * @return The command.
+     */
+	public Command sysIdDynamic(TuningType type, SysIdRoutine.Direction direction) {
+		return switch (type) {
+            case ANGLE ->
+                Commands.runOnce(() -> mTuningType = type)
+                    .andThen(angleRoutine().dynamic(direction))
+                    .andThen(Commands.runOnce(() -> mTuningType = TuningType.NONE));
+            case DRIVE ->
+                Commands.runOnce(() -> mTuningType = type)
+                    .andThen(driveRoutine().dynamic(direction))
+                    .andThen(Commands.runOnce(() -> mTuningType = TuningType.NONE));
+            default -> {
+                DriverStation.reportWarning("Did not provide a valid tuning type", false);
+                yield Commands.none();
+            }
+        };
+	}
+
+    /**
+     * The command to run a sysid routine of the specified type and direction.
+     * @param type The type of routine (DRIVE or ANGLE).
+     * @param direction The direction to run in.
+     * @return The command.
+     */
+	public Command sysIdQuasistatic(TuningType type, SysIdRoutine.Direction direction) {
+		return switch (type) {
+            case ANGLE ->
+                Commands.runOnce(() -> mTuningType = type)
+                    .andThen(Commands.runOnce(
+                        () -> mPeriodicIO.driveRequest = new NeutralOut()))
+                    .andThen(angleRoutine().quasistatic(direction))
+                    .andThen(Commands.runOnce(() -> mTuningType = TuningType.NONE));
+            case DRIVE ->
+                Commands.runOnce(() -> mTuningType = type)
+                    .andThen(Commands.runOnce(
+                        () -> mPeriodicIO.angleRequest = new NeutralOut()))
+                    .andThen(driveRoutine().quasistatic(direction))
+                    .andThen(Commands.runOnce(() -> mTuningType = TuningType.NONE));
+            default -> {
+                DriverStation.reportWarning("Did not provide a valid tuning type", false);
+                yield Commands.none();
+            }
+        };
 	}
 
     @Override

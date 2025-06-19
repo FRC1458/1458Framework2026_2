@@ -7,21 +7,26 @@ import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.sim.Pigeon2SimState;
 
 import frc.robot.Constants;
-import frc.robot.Constants.Ports;
+import frc.robot.subsystems.RedSubsystemBase;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 
-public class Pigeon extends SubsystemBase {
-	public static final Pigeon mPigeon = new Pigeon(Ports.PIGEON);
+public class Pigeon extends RedSubsystemBase {
+	private static Pigeon mPigeon;
+	public static Pigeon getInstance() {
+		if (mPigeon == null) {
+			mPigeon = new Pigeon(Constants.Ports.PIGEON);
+		}
+		return mPigeon;
+	}
+
 	private final Pigeon2 mGyro;
 
-	// Configs
 	private boolean inverted = Constants.Drive.INVERT_GYRO;
 	private Rotation2d yawAdjustmentAngle = new Rotation2d();
 	private Rotation2d rollAdjustmentAngle = new Rotation2d();

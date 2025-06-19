@@ -1,7 +1,6 @@
 package frc.robot.commands;
 
-import static frc.robot.subsystems.drive.Drive.mDrive;
-import static frc.robot.subsystems.drive.WheelTracker.mWheelTracker;
+import frc.robot.subsystems.drive.Drive;
 import frc.robot.Robot;
 import frc.robot.lib.trajectory.RedTrajectory;
 import frc.robot.lib.trajectory.TrajectoryLoader;
@@ -18,17 +17,13 @@ public final class Autos {
 
 	/** An auto that runs a single test trajectory. */
 	public static Command driveAuto() {
-		try {
-			RedTrajectory traj = TrajectoryLoader.loadAutoTrajectory(TrajectoryType.PATHPLANNER, "zisen").get();
-			if (Robot.isSimulation()) {
-				return mDrive.runOnce(() -> mWheelTracker.resetPose(traj.getInitialState().pose))
-							.andThen(mDrive.prepareCommand(traj.getInitialState().speeds, 1))
-							.andThen(mDrive.trajectoryCommand(traj));
-			}
-			return mDrive.prepareCommand(traj.getInitialState().speeds, 1)
-						.andThen(mDrive.trajectoryCommand(traj));
-		} catch(Exception e) {
-			return Commands.none();
+		RedTrajectory traj = TrajectoryLoader.loadAutoTrajectory(TrajectoryType.PATHPLANNER, "zisen").get();
+		if (Robot.isSimulation()) {
+			return Drive.getInstance().runOnce(() -> Drive.getInstance().resetPose(traj.getInitialState().pose))
+						.andThen(Drive.getInstance().prepareCommand(traj.getInitialState().speeds, 1))
+						.andThen(Drive.getInstance().trajectoryCommand(traj));
 		}
+		return Drive.getInstance().prepareCommand(traj.getInitialState().speeds, 1)
+					.andThen(Drive.getInstance().trajectoryCommand(traj));
 	}
 }

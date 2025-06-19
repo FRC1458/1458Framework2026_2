@@ -1,17 +1,12 @@
 package frc.robot.subsystems.drive;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.DoubleSupplier;
 
 import com.pathplanner.lib.path.GoalEndState;
-import com.pathplanner.lib.path.PathConstraints;
-import com.pathplanner.lib.path.PathPlannerPath;
 import com.pathplanner.lib.pathfinding.LocalADStar;
 import com.pathplanner.lib.pathfinding.Pathfinder;
-import com.pathplanner.lib.pathfinding.Pathfinding;
-
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -30,25 +25,27 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants;
-import frc.robot.Robot;
 import frc.robot.RobotState;
 import frc.robot.lib.localization.FieldLayout;
 import frc.robot.lib.swerve.*;
 import frc.robot.lib.trajectory.RedTrajectory;
 import frc.robot.lib.util.Conversions;
 import frc.robot.lib.util.Util;
-import frc.robot.lib.util.interpolation.InterpolatingPose2d;
 
-import static frc.robot.Cancoders.mCanCoders;
-import static frc.robot.subsystems.drive.Pigeon.mPigeon;
-import static frc.robot.subsystems.drive.WheelTracker.mWheelTracker;
+import frc.robot.Cancoders;
+import frc.robot.subsystems.RedSubsystemBase;
 
-public class Drive extends IDrive {
-    public static final Drive mDrive = new Drive();
+public class Drive extends RedSubsystemBase {
+    public static Drive mDrive;
+    public static Drive getInstance() {
+        if (mDrive == null) {
+            return new Drive();
+        }
+        return mDrive;
+    }
 
     private State mState = State.TELEOP;
     private static enum State {
@@ -69,12 +66,15 @@ public class Drive extends IDrive {
         public Twist2d predictedVelocity;
     }
 
-    public SwerveModule[] mSwerveModules;
+    private final SwerveModule[] mSwerveModules;
 
+    private WheelTracker mWheelTracker;
+    private Pigeon mPigeon;
+    private Cancoders mCancoders;
     private DriveController mDriveController;
     private Pathfinder mPathFinder;
 
-    public SwerveDriveKinematics mKinematics;
+    private SwerveDriveKinematics mKinematics;
 
     private SlewRateLimiter mAccelLimiter;
     private SlewRateLimiter mRotationAccelLimiter;
@@ -88,55 +88,35 @@ public class Drive extends IDrive {
     private final StructPublisher<ChassisSpeeds> chassisSpeedsPublisher = NetworkTableInstance.getDefault()
         .getStructTopic("SmartDashboard/Drive/ChassisSpeeds", ChassisSpeeds.struct).publish();
 
-    private Drive() {
+    public Drive() {
         mPeriodicIO = new PeriodicIO();
+        mCancoders = Cancoders.getInstance();
         mSwerveModules = new SwerveModule[] {
             new SwerveModule(
-                Constants.Drive.Modules.FRONT_LEFT, mCanCoders.getFrontLeft()), 
+                Constants.Drive.Modules.FRONT_LEFT, mCancoders.getFrontLeft()), 
             new SwerveModule(
-                Constants.Drive.Modules.FRONT_RIGHT, mCanCoders.getFrontRight()), 
+                Constants.Drive.Modules.FRONT_RIGHT, mCancoders.getFrontRight()), 
             new SwerveModule(
-                Constants.Drive.Modules.BACK_LEFT, mCanCoders.getBackLeft()), 
+                Constants.Drive.Modules.BACK_LEFT, mCancoders.getBackLeft()), 
             new SwerveModule(   
-                Constants.Drive.Modules.BACK_RIGHT, mCanCoders.getBackRight())
+                Constants.Drive.Modules.BACK_RIGHT, mCancoders.getBackRight())
+            // make sure to declare in the correct order
         };
         mKinematics = new SwerveDriveKinematics(Constants.Drive.MODULE_LOCATIONS);
         mAccelLimiter = new SlewRateLimiter(Constants.Drive.MAX_ACCEL);
         mRotationAccelLimiter = new SlewRateLimiter(Constants.Drive.MAX_ROTATION_ACCEL);
         mWheelTracker = new WheelTracker(mSwerveModules);
+        mPigeon = Pigeon.getInstance();
         mDriveController = new PIDHolonomicDriveController(
             Constants.Auto.TRANSLATION_CONSTANTS, Constants.Auto.ROTATION_CONSTANTS, Constants.Auto.ACCELERATION_CONSTANT);
         mPathFinder = new LocalADStar();
         SmartDashboard.putData(this);
+        for (SwerveModule swerveModule : mSwerveModules) {
+            swerveModule.register();
+        }
+        this.register();
     }
 
-    /**
-     * Does some calculations
-     * idk really what this does.
-     */
-    private void updateOdometry() {
-        SwerveModuleState[] moduleStates = getModuleStates();
-		Twist2d twist_vel = Conversions.toTwist2d(mKinematics.toChassisSpeeds(moduleStates));
-		Translation2d translation_vel = new Translation2d(twist_vel.dx, twist_vel.dy);
-		translation_vel = translation_vel.rotateBy(mPigeon.getYaw());
-        
-        Twist2d predictedTwistVelocity = Conversions.toTwist2d(mPeriodicIO.targetSpeeds);
-		mPeriodicIO.predictedVelocity =
-            Util.logMap(Util.expMap(
-                predictedTwistVelocity).rotateBy(
-                    mPigeon.getYaw()));
-        
-		mPeriodicIO.measuredVelocity = new Twist2d(
-            translation_vel.getX(),
-            translation_vel.getY(),
-            twist_vel.dtheta);
-        
-        RobotState.addOdometryUpdate(
-            Timer.getFPGATimestamp(),
-            new InterpolatingPose2d(mWheelTracker.getRobotPose()),
-            mPeriodicIO.measuredVelocity,
-            mPeriodicIO.predictedVelocity);
-    }
 
     @Override
     public void periodic() {        
@@ -163,6 +143,7 @@ public class Drive extends IDrive {
                 setTargetSpeeds(new ChassisSpeeds());
                 setModuleTargetStates(mPeriodicIO.targetSpeeds);
         }
+
         for (int i = 0; i < mSwerveModules.length; i++) {
             SwerveModule swerveModule = mSwerveModules[i];
             SwerveModuleState state = mPeriodicIO.targetModuleStates[i];
@@ -189,7 +170,12 @@ public class Drive extends IDrive {
         mPigeon.setSimAngularVelocity(mPeriodicIO.targetSpeeds.omegaRadiansPerSecond);
     }
 
-    @Override
+    /**
+     * A command that updates the target speeds, based on input from the controller.
+     * @param x The x component of the target chassis speeds, field-relative.
+     * @param y The y component of the target chassis speeds, field-relative.
+     * @param theta The rotation component of the target chassis speeds, field-relative.
+     */
     public Command teleopCommand(DoubleSupplier x, DoubleSupplier y, DoubleSupplier theta) { 
         return Commands.runOnce(this::setTeleop, this)
             .andThen(Commands.run(() -> {
@@ -200,7 +186,10 @@ public class Drive extends IDrive {
                     }, this));
     }
 
-    @Override
+    /**
+     * A command that follows a trajectory.
+     * @param trajectory The trajectory to follow.
+     */
     public Command trajectoryCommand(RedTrajectory trajectory) {
         if (trajectory == null) {
             System.out.println("the trajectory was.");
@@ -251,14 +240,41 @@ public class Drive extends IDrive {
     public Command prepareCommand(ChassisSpeeds speeds, double duration) {
         return Commands.runOnce(() -> setPreparing(speeds)).andThen(Commands.waitSeconds(duration));
     }
+
+    /**
+     * The command to run a sysid routine of the specified type and direction.
+     * @param moduleId The module to run the routine on.
+     * @param type The type of routine (DRIVE or ANGLE).
+     * @param direction The direction to run in.
+     * @return The command.
+     */
+    public Command sysIdDynamic(int moduleId, SwerveModule.TuningType type, SysIdRoutine.Direction direction) {
+        return mSwerveModules[moduleId].sysIdDynamic(type, direction);
+    }
+
+    /**
+     * The command to run a sysid routine of the specified type and direction.
+     * @param moduleId The module to run the routine on.
+     * @param type The type of routine (DRIVE or ANGLE).
+     * @param direction The direction to run in.
+     * @return The command.
+     */
+    public Command sysIdQuasistatic(int moduleId, SwerveModule.TuningType type, SysIdRoutine.Direction direction) {
+        return mSwerveModules[moduleId].sysIdQuasistatic(type, direction);
+    }
     
-    @Override
+    /**
+     * Sets the robot to {@code TELEOP} mode. It will now run the default command.
+     */
     protected void setTeleop() {
         this.mState = State.TELEOP;
         setTargetSpeeds(new ChassisSpeeds());
     }
 
-    @Override
+    /**
+     * Sets the robot to {@code PATH_FOLLOWING} mode, and follows the trajectory.
+     * @param trajectory The trajectory to follow.
+     */
     protected void setTrajectory(RedTrajectory trajectory) {
         this.mState = State.PATH_FOLLOWING;
         mDriveController.reset();
@@ -283,15 +299,50 @@ public class Drive extends IDrive {
         setModuleTargetStatesPreparing(speeds);
     }
 
-    @Override
+    /**
+     * Something that links the WheelTracker and the RobotState??? idk what this does
+     * @param pose The current pose from RobotState.
+     */
     public void setOdometry(Pose2d pose) {
         mWheelTracker.resetPose(pose);
         RobotState.addOdometryUpdate(
             Timer.getFPGATimestamp(), 
-            new InterpolatingPose2d(mWheelTracker.getRobotPose()),
+            mWheelTracker.getRobotPose(),
             mPeriodicIO.measuredVelocity, mPeriodicIO.predictedVelocity
 		);
 	}    
+
+    /**
+     * Does some calculations
+     * idk really what this does.
+     */
+    private void updateOdometry() {
+        SwerveModuleState[] moduleStates = getModuleStates();
+		Twist2d twist_vel = Conversions.toTwist2d(mKinematics.toChassisSpeeds(moduleStates));
+		Translation2d translation_vel = new Translation2d(twist_vel.dx, twist_vel.dy);
+		translation_vel = translation_vel.rotateBy(mPigeon.getYaw());
+        
+        Twist2d predictedTwistVelocity = Conversions.toTwist2d(mPeriodicIO.targetSpeeds);
+		mPeriodicIO.predictedVelocity =
+            Util.logMap(Util.expMap(
+                predictedTwistVelocity).rotateBy(
+                    mPigeon.getYaw()));
+        
+		mPeriodicIO.measuredVelocity = new Twist2d(
+            translation_vel.getX(),
+            translation_vel.getY(),
+            twist_vel.dtheta);
+        
+        RobotState.addOdometryUpdate(
+            Timer.getFPGATimestamp(),
+            mWheelTracker.getRobotPose(),
+            mPeriodicIO.measuredVelocity,
+            mPeriodicIO.predictedVelocity);
+    }
+
+    public void resetPose(Pose2d pose) {
+        mWheelTracker.resetPose(pose);
+    }
 
     /**
      * Sets target speeds based on controller input.
@@ -309,13 +360,19 @@ public class Drive extends IDrive {
             )
         );
     }
-    
-    @Override
+
+    /**
+     * Sets the target chassis speeds of the robot.
+     * @param chassisSpeeds The desired chassis speeds, robot-relative.
+     */
     protected void setTargetSpeeds(ChassisSpeeds speeds) {
         mPeriodicIO.targetSpeeds = limitSpeeds(speeds);
     }
 
-    @Override
+    /**
+    * Sets the target states of the individual modules.
+    * @param chassisSpeeds The filtered chassis speeds, robot-relative.
+    */
     protected void setModuleTargetStates(ChassisSpeeds speeds) {
         SwerveModuleState[] rawTargetModuleStates = mKinematics.toSwerveModuleStates(mPeriodicIO.targetSpeeds);
         SwerveDriveKinematics.desaturateWheelSpeeds(

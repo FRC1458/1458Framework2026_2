@@ -6,14 +6,18 @@ import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.CANcoderConfigurator;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.signals.SensorDirectionValue;
-import frc.robot.Constants.Ports;
-import frc.robot.lib.drivers.CanDeviceId;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.Timer;
 import java.util.Optional;
 
 public class Cancoders {
-	public static final Cancoders mCanCoders = new Cancoders();
+	public static Cancoders mCanCoders;
+	public static Cancoders getInstance() {
+		if (mCanCoders == null) {
+			mCanCoders = new Cancoders();
+		}
+		return mCanCoders;
+	}
 
 	private final CANcoder mFrontLeft;
 	private final CANcoder mFrontRight;
@@ -80,7 +84,7 @@ public class Cancoders {
 		return thisCancoder;
 	}
 
-	private Cancoders() {
+	public Cancoders() {
 		mFrontLeft = build(Constants.Ports.FL_CANCODER);
 		mFrontLeftObserver = new CanTimeObserver(mFrontLeft);
 

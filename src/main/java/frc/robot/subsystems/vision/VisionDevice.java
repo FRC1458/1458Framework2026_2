@@ -4,13 +4,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import frc.robot.Constants.Limelight.VisionDeviceConstants;
-import frc.robot.Constants.Limelight.VisionDeviceConstants;
 
-import static frc.robot.subsystems.drive.Pigeon.mPigeon;
 import frc.robot.RobotState;
 import frc.robot.RobotState.VisionUpdate;
 import frc.robot.lib.localization.FieldLayout;
 import frc.robot.lib.localization.LimelightHelpers;
+import frc.robot.subsystems.drive.Pigeon;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -112,7 +111,7 @@ public class VisionDevice {
 			return;
 		}
 
-		LimelightHelpers.SetRobotOrientation(mConstants.tableName, mPigeon.getYaw().getDegrees(), 0, 0, 0, 0, 0);
+		LimelightHelpers.SetRobotOrientation(mConstants.tableName, Pigeon.getInstance().getYaw().getDegrees(), 0, 0, 0, 0, 0);
 
 		Pose2d botPose = new Pose2d(mt2Pose[0], mt2Pose[1], new Rotation2d(mt2Pose[5] * Math.PI / 180));
 		Vector<N2> stdDevsVec = VecBuilder.fill(stdDevs[6], stdDevs[7]);

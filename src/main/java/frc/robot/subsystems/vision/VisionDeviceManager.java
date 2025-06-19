@@ -2,15 +2,17 @@ package frc.robot.subsystems.vision;
 
 import frc.robot.Constants;
 import frc.robot.lib.util.TunableNumber;
+import frc.robot.subsystems.RedSubsystemBase;
 import frc.robot.lib.util.MovingAverage;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
-
 import java.util.List;
 
-public class VisionDeviceManager extends SubsystemBase {
+public class VisionDeviceManager extends RedSubsystemBase {
     public static boolean enabled;
 	public static VisionDeviceManager mVisionDeviceManager;
+	public static VisionDeviceManager getInstance() {
+		return mVisionDeviceManager;
+	}
 
 	private VisionDevice mLeftCamera;
 	private VisionDevice mRightCamera;
@@ -28,12 +30,13 @@ public class VisionDeviceManager extends SubsystemBase {
 
 	private static boolean disable_vision = false;
 
-	private VisionDeviceManager() {
+	public VisionDeviceManager() {
 		mLeftCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.L_CONSTANTS);
 		mRightCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.R_CONSTANTS);
 		mFrontCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.F_CONSTANTS);
 		mBackCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.B_CONSTANTS);
 		mAllCameras = List.of(mLeftCamera, mRightCamera, mFrontCamera, mBackCamera);
+		this.register();
 	}
 
 	@Override

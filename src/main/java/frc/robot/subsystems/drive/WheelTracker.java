@@ -2,9 +2,6 @@ package frc.robot.subsystems.drive;
 
 import com.ctre.phoenix6.BaseStatusSignal;
 import frc.robot.Constants;
-import frc.robot.Robot;
-import static frc.robot.subsystems.drive.Pigeon.mPigeon;
-
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
@@ -16,9 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class WheelTracker {
-	public static WheelTracker mWheelTracker;
-	public static boolean isInitialized = false;
 	private final SwerveModule[] mModules;
+	private final Pigeon mPigeon;
 
 	private WheelProperties[] WheelProperties = new WheelProperties[4];
 	private Pose2d mRobotPose = new Pose2d(10,10,new Rotation2d(0));
@@ -40,6 +36,7 @@ public class WheelTracker {
 		}
 
 		mModules = modules;
+		mPigeon = Pigeon.getInstance();
 
 		for (int i = 0; i < WheelProperties.length; i++) {
 			WheelProperties w = new WheelProperties();
@@ -73,7 +70,6 @@ public class WheelTracker {
 		mRobotField.setRobotPose(mRobotPose);
 
 		SmartDashboard.putData("WheelTracker", mRobotField);
-		isInitialized = true;
 	}
 
 	public void start() {
