@@ -3,7 +3,6 @@ package frc.robot;
 import java.util.Map;
 import java.util.Optional;
 
-import static frc.robot.subsystems.drive.Drive.mDrive;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.estimator.ExtendedKalmanFilter;
@@ -14,10 +13,11 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.math.Nat;
 import edu.wpi.first.math.StateSpaceUtil;
 import frc.robot.lib.localization.VisionPoseAcceptor;
-import frc.robot.lib.util.InterpolatingTreeMap;
-import frc.robot.lib.util.InterpolationUtil;
 import frc.robot.lib.util.MovingAverage;
 import frc.robot.lib.util.Util;
+import frc.robot.lib.util.interpolation.InterpolatingTreeMap;
+import frc.robot.lib.util.interpolation.InterpolationUtil;
+import frc.robot.subsystems.drive.Drive;
 import edu.wpi.first.math.interpolation.InverseInterpolator;
 
 
@@ -90,7 +90,7 @@ public class RobotState {
 
 	public static synchronized void addOdometryUpdate(
 			double now, Pose2d odometryPose, Twist2d measuredVelocity, Twist2d predictedVelocity) {
-		mOdometryToVehicle.put(new Double(now), odometryPose);
+		mOdometryToVehicle.put(now, odometryPose);
 		mKalmanFilter.predict(
 				VecBuilder.fill(0.0, 0.0), Constants.DT); // Propagate error of  current vision prediction
 		mVehicleVelocityMeasured = measuredVelocity;
@@ -110,24 +110,24 @@ public class RobotState {
 		if (mLatestVisionUpdate.isEmpty() || mInitialFieldToOdom.isEmpty()) {
 			double visionTimestamp = update.mTimestamp;
 			mLastTimestamp = update.mTimestamp;
-			Pose2d proximateDtPose = mOdometryToVehicle.get(new Double(visionTimestamp));
+			Pose2d proximateDtPose = mOdometryToVehicle.get((visionTimestamp));
 			Translation2d fieldToVision = update.mFieldToCamera
 					.plus(update.getmRobotToCamera()
 							.rotateBy(getLatestOdomToVehicle().getValue().getRotation()).unaryMinus());
 			Translation2d odomToVehicleTranslation = proximateDtPose.getTranslation();
 			Translation2d fieldToOdom = fieldToVision
 					.plus(odomToVehicleTranslation.unaryMinus());
-			mFieldToOdometry.put(new Double(visionTimestamp), fieldToOdom);
+			mFieldToOdometry.put((visionTimestamp), fieldToOdom);
 			mInitialFieldToOdom = Optional.of(mFieldToOdometry.lastEntry().getValue());
 			mKalmanFilter.setXhat(0, fieldToOdom.getX());
 			mKalmanFilter.setXhat(1, fieldToOdom.getY());
 			mLatestVisionUpdate = Optional.ofNullable(update);
 
-			mDrive.setOdometry(new Pose2d(fieldToOdom, getLatestOdomToVehicle().getValue().getRotation()));
+			Drive.getInstance().setOdometry(new Pose2d(fieldToOdom, getLatestOdomToVehicle().getValue().getRotation()));
 		} else {
 			double visionTimestamp = mLatestVisionUpdate.get().mTimestamp;
 			mLastTimestamp = mLatestVisionUpdate.get().mTimestamp;
-			Pose2d proximateDtPose = mOdometryToVehicle.get(new Double(visionTimestamp));
+			Pose2d proximateDtPose = mOdometryToVehicle.get((visionTimestamp));
 			mLatestVisionUpdate = Optional.ofNullable(update);
 			Translation2d fieldToVision = mLatestVisionUpdate
 					.get().mFieldToCamera
@@ -153,7 +153,7 @@ public class RobotState {
 									fieldToOdom.getY()),
 							StateSpaceUtil.makeCovarianceMatrix(Nat.N2(), stdevs));
 					mFieldToOdometry.put(
-							new Double(visionTimestamp),
+							(visionTimestamp),
 							new Translation2d(mKalmanFilter.getXhat(0), mKalmanFilter.getXhat(1)));
 					if (!getHasRecievedVisionUpdate()) {
 						mHasRecievedVisionUpdate = true;
@@ -230,7 +230,7 @@ public class RobotState {
 	 * @return Odometry relative robot pose at timestamp.
 	 */
 	public static synchronized Pose2d getOdomToVehicle(double timestamp) {
-		return mOdometryToVehicle.get(new Double(timestamp));
+		return mOdometryToVehicle.get((timestamp));
 	}
 
 	/**
@@ -264,7 +264,7 @@ public class RobotState {
 	public static synchronized Translation2d getFieldToOdom(double timestamp) {
 		if (mFieldToOdometry.isEmpty())
 			return new Translation2d();
-		return mFieldToOdometry.get(new Double(timestamp));
+		return mFieldToOdometry.get((timestamp));
 	}
 
 	/**

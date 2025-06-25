@@ -2,6 +2,7 @@ package frc.robot;
 
 import edu.wpi.first.hal.AllianceStationID;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
@@ -108,6 +109,8 @@ public class Robot extends TimedRobot {
 		mController.b().whileTrue(mExampleSubsystem.exampleMethodCommand());
 		Drive.getInstance().setDefaultCommand(Drive.getInstance().teleopCommand(mController::getLeftY, mController::getLeftX, mController::getRightY));
 		mController.a().onTrue(Commands.runOnce(() -> DriverStationSim.setAllianceStationId(AllianceStationID.Blue1)));
+		mController.x().onTrue(Drive.getInstance().driveToPoseCommand(
+			new Pose2d(5.0, 5.0, Rotation2d.fromDegrees(80))));
 	}
 
 	/** This function is called periodically during operator control. */

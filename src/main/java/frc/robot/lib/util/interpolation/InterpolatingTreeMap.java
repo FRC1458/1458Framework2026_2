@@ -1,4 +1,4 @@
-package frc.robot.lib.util;
+package frc.robot.lib.util.interpolation;
 
 import java.util.Comparator;
 import java.util.Map.Entry;
@@ -66,7 +66,11 @@ public class InterpolatingTreeMap<K, V> {
 	public void put(K key, V value) {
 		map.put(key, value);
 		if (map.size() > max) {
-			map.remove(map.firstEntry());
+			try {
+				map.remove(map.firstEntry());
+			} catch (Exception e) {
+				System.out.println("This is for appeasing the compiler");
+			}
 		}
 	}
 

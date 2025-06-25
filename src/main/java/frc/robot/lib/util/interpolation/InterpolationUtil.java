@@ -1,4 +1,4 @@
-package frc.robot.lib.util;
+package frc.robot.lib.util.interpolation;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;

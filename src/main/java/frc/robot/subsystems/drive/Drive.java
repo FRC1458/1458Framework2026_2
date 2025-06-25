@@ -28,7 +28,9 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants;
+import frc.robot.Robot;
 import frc.robot.RobotState;
+import frc.robot.lib.localization.CustomADStar;
 import frc.robot.lib.localization.FieldLayout;
 import frc.robot.lib.swerve.*;
 import frc.robot.lib.trajectory.RedTrajectory;
@@ -39,7 +41,7 @@ import frc.robot.Cancoders;
 import frc.robot.subsystems.RedSubsystemBase;
 
 public class Drive extends RedSubsystemBase {
-    public static Drive mDrive;
+    private static Drive mDrive;
     public static Drive getInstance() {
         if (mDrive == null) {
             return new Drive();
@@ -72,7 +74,7 @@ public class Drive extends RedSubsystemBase {
     private Pigeon mPigeon;
     private Cancoders mCancoders;
     private DriveController mDriveController;
-    private Pathfinder mPathFinder;
+    private CustomADStar mPathFinder;
 
     private SwerveDriveKinematics mKinematics;
 
@@ -109,7 +111,7 @@ public class Drive extends RedSubsystemBase {
         mPigeon = Pigeon.getInstance();
         mDriveController = new PIDHolonomicDriveController(
             Constants.Auto.TRANSLATION_CONSTANTS, Constants.Auto.ROTATION_CONSTANTS, Constants.Auto.ACCELERATION_CONSTANT);
-        mPathFinder = new LocalADStar();
+        mPathFinder = new CustomADStar();
         SmartDashboard.putData(this);
         for (SwerveModule swerveModule : mSwerveModules) {
             swerveModule.register();
@@ -121,6 +123,7 @@ public class Drive extends RedSubsystemBase {
     @Override
     public void periodic() {        
         updateOdometry();
+        mPathFinder.setStartPosition(RobotState.getLatestFieldToOdom());
         switch (mState) {
             case TELEOP:
                 setModuleTargetStates(mPeriodicIO.targetSpeeds);
@@ -205,26 +208,45 @@ public class Drive extends RedSubsystemBase {
      * A command to drive to a pose.
      * @param pose The pose to drive to.
      */
-    public Command driveToPoseCommand(Pose2d pose) {
+    public Command driveToPoseCommand1(Pose2d pose) {
         if (pose == null) {
             System.out.println("the pose was.");
             return Commands.none();
         }
-        
-        Pose2d startingPose = RobotState.getLatestFieldToVehicle();
-        mPathFinder.setStartPosition(startingPose.getTranslation());
         mPathFinder.setGoalPosition(pose.getTranslation());
-
         try {
             RedTrajectory traj = new RedTrajectory(mPathFinder.getCurrentPath(
                 Constants.Pathplanner.GLOBAL_CONSTRAINTS, 
                 new GoalEndState(0, pose.getRotation()))
-                .getIdealTrajectory(Constants.Pathplanner.config).get(), false);
+                    .getIdealTrajectory(Constants.Pathplanner.config).get(), false);
             return trajectoryCommand(traj);
         } catch (Exception e) {
             DriverStation.reportWarning("Trajectory failed to generate while generating command", false);
             return Commands.none();
         }
+    }
+
+    /**
+     * A command to drive to a pose.
+     * @param pose The pose to drive to.
+     */
+    public Command driveToPoseCommand(Pose2d pose) {
+        if (pose == null) {
+            System.out.println("the pose was.");
+            return Commands.none();
+        }
+        return Commands.runOnce(() -> 
+            mPathFinder.setGoalPosition(pose.getTranslation())
+        ).andThen(
+            Commands.waitSeconds(Constants.Pathplanner.GENERATION_WAIT_TIME),
+            trajectoryCommand(
+                new RedTrajectory(mPathFinder.getCurrentPath(
+                    Constants.Pathplanner.GLOBAL_CONSTRAINTS, 
+                    new GoalEndState(0, pose.getRotation()))
+                        .getIdealTrajectory(Constants.Pathplanner.config)
+                        .get(), 
+                        false)));
+
     }
 
     /**

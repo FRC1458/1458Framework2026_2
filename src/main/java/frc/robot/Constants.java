@@ -229,5 +229,6 @@ public final class Constants {
 								Drive.MAX_ACCEL, 
 								Drive.MAX_ROTATION_SPEED, 
 								Drive.MAX_ROTATION_ACCEL);
+		public static final double GENERATION_WAIT_TIME = 0.4;
 	}
 }
