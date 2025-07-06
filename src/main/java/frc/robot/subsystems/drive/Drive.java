@@ -2,11 +2,11 @@ package frc.robot.subsystems.drive;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.DoubleSupplier;
-
+import java.util.function.BooleanSupplier;
+import com.ctre.phoenix6.SignalLogger;
 import com.pathplanner.lib.path.GoalEndState;
-import com.pathplanner.lib.pathfinding.LocalADStar;
-import com.pathplanner.lib.pathfinding.Pathfinder;
+import com.pathplanner.lib.path.IdealStartingState;
+
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -18,14 +18,14 @@ import edu.wpi.first.math.kinematics.*;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.networktables.StructPublisher;
+import edu.wpi.first.units.Units;
 import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.WaitUntilCommand;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants;
 import frc.robot.Robot;
@@ -37,19 +37,18 @@ import frc.robot.lib.trajectory.RedTrajectory;
 import frc.robot.lib.util.Conversions;
 import frc.robot.lib.util.Util;
 
-import frc.robot.Cancoders;
-import frc.robot.subsystems.RedSubsystemBase;
+import frc.robot.CancoderManager;
 
-public class Drive extends RedSubsystemBase {
-    private static Drive mDrive;
+public class Drive extends SubsystemBase {
+    private static Drive driveInstance;
     public static Drive getInstance() {
-        if (mDrive == null) {
-            return new Drive();
+        if (driveInstance == null) {
+            driveInstance = new Drive();
         }
-        return mDrive;
+        return driveInstance;
     }
 
-    private State mState = State.TELEOP;
+    private State state = State.TELEOP;
     private static enum State {
         DISABLED,
         TELEOP,
@@ -58,31 +57,30 @@ public class Drive extends RedSubsystemBase {
         PREPARING
     }
 
-    private PeriodicIO mPeriodicIO;
-    private class PeriodicIO {
-        ChassisSpeeds targetSpeeds = new ChassisSpeeds();
-        SwerveModuleState[] targetModuleStates = new SwerveModuleState[] {
-            new SwerveModuleState(), new SwerveModuleState(), new SwerveModuleState(), new SwerveModuleState()
-        };
+    private DriveIO io;
+    public static class DriveIO {
+        public ChassisSpeeds targetSpeeds = new ChassisSpeeds();
+        public SwerveModuleState[] targetModuleStates = new SwerveModuleState[] {
+            new SwerveModuleState(), new SwerveModuleState(), new SwerveModuleState(), new SwerveModuleState()};
         public Twist2d measuredVelocity;
         public Twist2d predictedVelocity;
     }
 
-    private final SwerveModule[] mSwerveModules;
+    private final SwerveModule[] swerveModules;
 
-    private WheelTracker mWheelTracker;
-    private Pigeon mPigeon;
-    private Cancoders mCancoders;
-    private DriveController mDriveController;
-    private CustomADStar mPathFinder;
+    private WheelTracker wheelTracker;
+    private Pigeon pigeon;
+    private CancoderManager cancoders;
+    private DriveController driveController;
+    private CustomADStar pathFinder;
 
-    private SwerveDriveKinematics mKinematics;
+    private SwerveDriveKinematics swerveKinematics;
 
-    private SlewRateLimiter mAccelLimiter;
-    private SlewRateLimiter mRotationAccelLimiter;
+    private SlewRateLimiter accelLimiter;
+    private SlewRateLimiter rotationAccelLimiter;
     
     private final StructArrayPublisher<SwerveModuleState> desiredStatesPublisher = NetworkTableInstance.getDefault()
-    .getStructArrayTopic("SmartDashboard/Drive/States_Desired", SwerveModuleState.struct).publish();
+        .getStructArrayTopic("SmartDashboard/Drive/States_Desired", SwerveModuleState.struct).publish();
     private final StructArrayPublisher<SwerveModuleState> measuredStatesPublisher = NetworkTableInstance.getDefault()
         .getStructArrayTopic("SmartDashboard/Drive/States_Measured", SwerveModuleState.struct).publish();
     private final StructPublisher<Rotation2d> rotationPublisher = NetworkTableInstance.getDefault()
@@ -91,52 +89,52 @@ public class Drive extends RedSubsystemBase {
         .getStructTopic("SmartDashboard/Drive/ChassisSpeeds", ChassisSpeeds.struct).publish();
 
     public Drive() {
-        mPeriodicIO = new PeriodicIO();
-        mCancoders = Cancoders.getInstance();
-        mSwerveModules = new SwerveModule[] {
+        io = new DriveIO();
+        cancoders = CancoderManager.getInstance();
+        swerveModules = new SwerveModule[] {
             new SwerveModule(
-                Constants.Drive.Modules.FRONT_LEFT, mCancoders.getFrontLeft()), 
+                Constants.Drive.Modules.FRONT_LEFT, cancoders.getFrontLeft()), 
             new SwerveModule(
-                Constants.Drive.Modules.FRONT_RIGHT, mCancoders.getFrontRight()), 
+                Constants.Drive.Modules.FRONT_RIGHT, cancoders.getFrontRight()), 
             new SwerveModule(
-                Constants.Drive.Modules.BACK_LEFT, mCancoders.getBackLeft()), 
+                Constants.Drive.Modules.BACK_LEFT, cancoders.getBackLeft()), 
             new SwerveModule(   
-                Constants.Drive.Modules.BACK_RIGHT, mCancoders.getBackRight())
+                Constants.Drive.Modules.BACK_RIGHT, cancoders.getBackRight())
             // make sure to declare in the correct order
         };
-        mKinematics = new SwerveDriveKinematics(Constants.Drive.MODULE_LOCATIONS);
-        mAccelLimiter = new SlewRateLimiter(Constants.Drive.MAX_ACCEL);
-        mRotationAccelLimiter = new SlewRateLimiter(Constants.Drive.MAX_ROTATION_ACCEL);
-        mWheelTracker = new WheelTracker(mSwerveModules);
-        mPigeon = Pigeon.getInstance();
-        mDriveController = new PIDHolonomicDriveController(
+        swerveKinematics = new SwerveDriveKinematics(Constants.Drive.MODULE_LOCATIONS);
+        accelLimiter = new SlewRateLimiter(Constants.Drive.MAX_ACCEL);
+        rotationAccelLimiter = new SlewRateLimiter(Constants.Drive.MAX_ROTATION_ACCEL);
+        wheelTracker = new WheelTracker(swerveModules);
+        pigeon = Pigeon.getInstance();
+        driveController = new PIDHolonomicDriveController(
             Constants.Auto.TRANSLATION_CONSTANTS, Constants.Auto.ROTATION_CONSTANTS, Constants.Auto.ACCELERATION_CONSTANT);
-        mPathFinder = new CustomADStar();
+        pathFinder = new CustomADStar();
         SmartDashboard.putData(this);
-        for (SwerveModule swerveModule : mSwerveModules) {
-            swerveModule.register();
-        }
-        this.register();
     }
 
 
     @Override
     public void periodic() {        
         updateOdometry();
-        mPathFinder.setStartPosition(RobotState.getLatestFieldToOdom());
-        switch (mState) {
+        pathFinder.setIdealStartingState(
+            new IdealStartingState(
+                Util.twist2dMagnitude(RobotState.getSmoothedVelocity()),
+                RobotState.getLatestFieldToVehicle().getRotation()));
+        pathFinder.setStartPosition(RobotState.getLatestFieldToOdom());
+        switch (state) {
             case TELEOP:
-                setModuleTargetStates(mPeriodicIO.targetSpeeds);
+                setModuleTargetStates(io.targetSpeeds);
                 break;    
             case PATH_FOLLOWING:
-                mDriveController.setInput(
+                driveController.setInput(
                     new Pair<Pose2d, Twist2d>(
                         RobotState.getLatestFieldToVehicle(), 
                         RobotState.getSmoothedVelocity()
                     )
                 );
-                setTargetSpeeds(mDriveController.getOutput());
-                setModuleTargetStates(mPeriodicIO.targetSpeeds);
+                setTargetSpeeds(driveController.getOutput());
+                setModuleTargetStates(io.targetSpeeds);
                 break;
             case X_LOCK:
                 break;
@@ -144,33 +142,33 @@ public class Drive extends RedSubsystemBase {
                 break;
             default:
                 setTargetSpeeds(new ChassisSpeeds());
-                setModuleTargetStates(mPeriodicIO.targetSpeeds);
+                setModuleTargetStates(io.targetSpeeds);
         }
 
-        for (int i = 0; i < mSwerveModules.length; i++) {
-            SwerveModule swerveModule = mSwerveModules[i];
-            SwerveModuleState state = mPeriodicIO.targetModuleStates[i];
+        for (int i = 0; i < swerveModules.length; i++) {
+            SwerveModule swerveModule = swerveModules[i];
+            SwerveModuleState state = io.targetModuleStates[i];
             swerveModule.setTargetState(state);
         }
 
-        FieldLayout.mField.setRobotPose(mWheelTracker.getRobotPose());
+        FieldLayout.field.setRobotPose(wheelTracker.getRobotPose());
 
-		SwerveModuleState[] other = new SwerveModuleState[4];
-		for (int i = 0; i < mPeriodicIO.targetModuleStates.length; i++) {
-			other[i] = mPeriodicIO.targetModuleStates[i];
-			other[i].angle = mPeriodicIO.targetModuleStates[i].angle;
-		}
+		SwerveModuleState[] other = io.targetModuleStates.clone();
 
         desiredStatesPublisher.set(other);
-		chassisSpeedsPublisher.set(mPeriodicIO.targetSpeeds);
-		Rotation2d rotation = mWheelTracker.getRobotPose().getRotation();
+		chassisSpeedsPublisher.set(io.targetSpeeds);
+		Rotation2d rotation = wheelTracker.getRobotPose().getRotation();
 		rotationPublisher.set(rotation);
 		measuredStatesPublisher.set(getModuleStates());
     }
 
     @Override
     public void simulationPeriodic() {
-        mPigeon.setSimAngularVelocity(mPeriodicIO.targetSpeeds.omegaRadiansPerSecond);
+        pigeon.setSimAngularVelocity(io.targetSpeeds.omegaRadiansPerSecond);
+    }
+
+    public BooleanSupplier interruptor() {
+        return (() -> false);
     }
 
     /**
@@ -179,13 +177,13 @@ public class Drive extends RedSubsystemBase {
      * @param y The y component of the target chassis speeds, field-relative.
      * @param theta The rotation component of the target chassis speeds, field-relative.
      */
-    public Command teleopCommand(DoubleSupplier x, DoubleSupplier y, DoubleSupplier theta) { 
+    public Command teleopCommand() { 
         return Commands.runOnce(this::setTeleop, this)
             .andThen(Commands.run(() -> {
                         this.setSpeedsFromController(
-                            x.getAsDouble(), 
-                            y.getAsDouble(),
-                            theta.getAsDouble());
+                            Robot.getController().getLeftX(),
+                            Robot.getController().getLeftY(),
+                            Robot.getController().getRightX());
                     }, this));
     }
 
@@ -200,8 +198,8 @@ public class Drive extends RedSubsystemBase {
         }
 
         return Commands.runOnce(() -> setTrajectory(trajectory), this)
-                       .andThen(new WaitUntilCommand(mDriveController::isDone))
-                       .andThen(new InstantCommand(this::setTeleop));
+                       .andThen(Commands.waitUntil(driveController::isDone))
+                       .andThen(Commands.runOnce(this::setTeleop));
     }
 
     /**
@@ -213,9 +211,9 @@ public class Drive extends RedSubsystemBase {
             System.out.println("the pose was.");
             return Commands.none();
         }
-        mPathFinder.setGoalPosition(pose.getTranslation());
+        pathFinder.setGoalPosition(pose.getTranslation());
         try {
-            RedTrajectory traj = new RedTrajectory(mPathFinder.getCurrentPath(
+            RedTrajectory traj = new RedTrajectory(pathFinder.getCurrentPath(
                 Constants.Pathplanner.GLOBAL_CONSTRAINTS, 
                 new GoalEndState(0, pose.getRotation()))
                     .getIdealTrajectory(Constants.Pathplanner.config).get(), false);
@@ -235,18 +233,25 @@ public class Drive extends RedSubsystemBase {
             System.out.println("the pose was.");
             return Commands.none();
         }
+        System.out.println("it be doing the thing");
         return Commands.runOnce(() -> 
-            mPathFinder.setGoalPosition(pose.getTranslation())
-        ).andThen(
-            Commands.waitSeconds(Constants.Pathplanner.GENERATION_WAIT_TIME),
-            trajectoryCommand(
-                new RedTrajectory(mPathFinder.getCurrentPath(
-                    Constants.Pathplanner.GLOBAL_CONSTRAINTS, 
-                    new GoalEndState(0, pose.getRotation()))
-                        .getIdealTrajectory(Constants.Pathplanner.config)
-                        .get(), 
-                        false)));
-
+            pathFinder.setGoalPosition(pose.getTranslation())).andThen(
+                Commands.race(
+                    Commands.waitUntil(() -> pathFinder.isNewPathAvailable()),
+                    Commands.waitSeconds(Constants.Pathplanner.GENERATION_WAIT_TIME)),
+                Commands.runOnce(() -> {
+                    try {
+                        trajectoryCommand(
+                            new RedTrajectory(
+                                pathFinder.getCurrentPath(
+                                    Constants.Pathplanner.GLOBAL_CONSTRAINTS, 
+                                    new GoalEndState(0, pose.getRotation()))
+                            .getIdealTrajectory(Constants.Pathplanner.config)
+                            .get(), 
+                            false));
+                    } catch (Exception e) {
+                        DriverStation.reportError("Trajectory failed to generate! " + e.getMessage(), true);
+                    }}));
     }
 
     /**
@@ -260,7 +265,46 @@ public class Drive extends RedSubsystemBase {
      * A command that aligns the swerves prior to some precise movement.
      */
     public Command prepareCommand(ChassisSpeeds speeds, double duration) {
-        return Commands.runOnce(() -> setPreparing(speeds)).andThen(Commands.waitSeconds(duration));
+        return Commands.runOnce(() -> setPreparing(speeds)).andThen(Commands.waitSeconds(duration))
+                       .andThen(Commands.waitUntil(interruptor()));
+    }    
+    
+    /**
+     * The system identification routine for the chassis rotation.
+     * @return The routine.
+     */
+    public SysIdRoutine rotationRoutine() {
+        return new SysIdRoutine(
+            new SysIdRoutine.Config(
+                Constants.Tuning.DriveRotation.RAMP_RATE,
+                Constants.Tuning.DriveRotation.DYNAMIC_VOLTAGE,
+                null,
+                state -> SignalLogger.writeString("/Sysid/DriveRotation/State", state.toString())
+            ), 
+            new SysIdRoutine.Mechanism(
+                volts -> io.targetSpeeds = new ChassisSpeeds(
+                    0, 0, volts.in(Units.Volts)), null, this));
+    }
+
+    /**
+     * The system identification routine for the chassis rotation.
+     * @return The routine.
+     */
+    public SysIdRoutine translationRoutine() {
+        return new SysIdRoutine(
+            new SysIdRoutine.Config(
+                Constants.Tuning.DriveTranslation.RAMP_RATE,
+                Constants.Tuning.DriveTranslation.DYNAMIC_VOLTAGE,
+                null,
+                state -> SignalLogger.writeString("/Sysid/DriveTranslation/State", state.toString())
+            ), 
+            new SysIdRoutine.Mechanism(
+                volts -> io.targetSpeeds = new ChassisSpeeds(
+                    volts.in(Units.Volts), 0, 0), null, this));
+    }
+
+    public Command rotationSysIdDynamic(SysIdRoutine.Direction direction) {
+        return rotationRoutine().dynamic(direction);
     }
 
     /**
@@ -270,8 +314,8 @@ public class Drive extends RedSubsystemBase {
      * @param direction The direction to run in.
      * @return The command.
      */
-    public Command sysIdDynamic(int moduleId, SwerveModule.TuningType type, SysIdRoutine.Direction direction) {
-        return mSwerveModules[moduleId].sysIdDynamic(type, direction);
+    public Command moduleSysIdDynamic(int moduleId, SwerveModule.State type, SysIdRoutine.Direction direction) {
+        return swerveModules[moduleId].sysIdDynamic(type, direction);
     }
 
     /**
@@ -281,15 +325,15 @@ public class Drive extends RedSubsystemBase {
      * @param direction The direction to run in.
      * @return The command.
      */
-    public Command sysIdQuasistatic(int moduleId, SwerveModule.TuningType type, SysIdRoutine.Direction direction) {
-        return mSwerveModules[moduleId].sysIdQuasistatic(type, direction);
+    public Command moduleSysIdQuasistatic(int moduleId, SwerveModule.State type, SysIdRoutine.Direction direction) {
+        return swerveModules[moduleId].sysIdQuasistatic(type, direction);
     }
     
     /**
      * Sets the robot to {@code TELEOP} mode. It will now run the default command.
      */
-    protected void setTeleop() {
-        this.mState = State.TELEOP;
+    private void setTeleop() {
+        this.state = State.TELEOP;
         setTargetSpeeds(new ChassisSpeeds());
     }
 
@@ -297,18 +341,18 @@ public class Drive extends RedSubsystemBase {
      * Sets the robot to {@code PATH_FOLLOWING} mode, and follows the trajectory.
      * @param trajectory The trajectory to follow.
      */
-    protected void setTrajectory(RedTrajectory trajectory) {
-        this.mState = State.PATH_FOLLOWING;
-        mDriveController.reset();
-        mDriveController.setTrajectory(trajectory);
+    private void setTrajectory(RedTrajectory trajectory) {
+        this.state = State.PATH_FOLLOWING;
+        driveController.reset();
+        driveController.setTrajectory(trajectory);
     }
 
     /**
      * Sets the robot into X-lock mode.
      */
     private void setXLock() {
-        this.mState = State.X_LOCK;
-        mPeriodicIO.targetModuleStates = new SwerveModuleState[] {
+        this.state = State.X_LOCK;
+        io.targetModuleStates = new SwerveModuleState[] {
             new SwerveModuleState(0.0, Rotation2d.fromDegrees(-45)),
             new SwerveModuleState(0.0, Rotation2d.fromDegrees(45)),
             new SwerveModuleState(0.0, Rotation2d.fromDegrees(45)),
@@ -317,7 +361,7 @@ public class Drive extends RedSubsystemBase {
     }
 
     private void setPreparing(ChassisSpeeds speeds) {
-        this.mState = State.PREPARING;
+        this.state = State.PREPARING;
         setModuleTargetStatesPreparing(speeds);
     }
 
@@ -326,11 +370,11 @@ public class Drive extends RedSubsystemBase {
      * @param pose The current pose from RobotState.
      */
     public void setOdometry(Pose2d pose) {
-        mWheelTracker.resetPose(pose);
+        wheelTracker.resetPose(pose);
         RobotState.addOdometryUpdate(
             Timer.getFPGATimestamp(), 
-            mWheelTracker.getRobotPose(),
-            mPeriodicIO.measuredVelocity, mPeriodicIO.predictedVelocity
+            wheelTracker.getRobotPose(),
+            io.measuredVelocity, io.predictedVelocity
 		);
 	}    
 
@@ -340,30 +384,30 @@ public class Drive extends RedSubsystemBase {
      */
     private void updateOdometry() {
         SwerveModuleState[] moduleStates = getModuleStates();
-		Twist2d twist_vel = Conversions.toTwist2d(mKinematics.toChassisSpeeds(moduleStates));
+		Twist2d twist_vel = Conversions.toTwist2d(swerveKinematics.toChassisSpeeds(moduleStates));
 		Translation2d translation_vel = new Translation2d(twist_vel.dx, twist_vel.dy);
-		translation_vel = translation_vel.rotateBy(mPigeon.getYaw());
+		translation_vel = translation_vel.rotateBy(pigeon.getYaw());
         
-        Twist2d predictedTwistVelocity = Conversions.toTwist2d(mPeriodicIO.targetSpeeds);
-		mPeriodicIO.predictedVelocity =
+        Twist2d predictedTwistVelocity = Conversions.toTwist2d(io.targetSpeeds);
+		io.predictedVelocity =
             Util.logMap(Util.expMap(
                 predictedTwistVelocity).rotateBy(
-                    mPigeon.getYaw()));
+                    pigeon.getYaw()));
         
-		mPeriodicIO.measuredVelocity = new Twist2d(
+		io.measuredVelocity = new Twist2d(
             translation_vel.getX(),
             translation_vel.getY(),
             twist_vel.dtheta);
         
         RobotState.addOdometryUpdate(
             Timer.getFPGATimestamp(),
-            mWheelTracker.getRobotPose(),
-            mPeriodicIO.measuredVelocity,
-            mPeriodicIO.predictedVelocity);
+            wheelTracker.getRobotPose(),
+            io.measuredVelocity,
+            io.predictedVelocity);
     }
 
     public void resetPose(Pose2d pose) {
-        mWheelTracker.resetPose(pose);
+        wheelTracker.resetPose(pose);
     }
 
     /**
@@ -387,25 +431,27 @@ public class Drive extends RedSubsystemBase {
      * Sets the target chassis speeds of the robot.
      * @param chassisSpeeds The desired chassis speeds, robot-relative.
      */
-    protected void setTargetSpeeds(ChassisSpeeds speeds) {
-        mPeriodicIO.targetSpeeds = limitSpeeds(speeds);
+    private void setTargetSpeeds(ChassisSpeeds speeds) {
+        io.targetSpeeds = limitSpeeds(speeds);
     }
+
+    
 
     /**
     * Sets the target states of the individual modules.
     * @param chassisSpeeds The filtered chassis speeds, robot-relative.
     */
-    protected void setModuleTargetStates(ChassisSpeeds speeds) {
-        SwerveModuleState[] rawTargetModuleStates = mKinematics.toSwerveModuleStates(mPeriodicIO.targetSpeeds);
+    private void setModuleTargetStates(ChassisSpeeds speeds) {
+        SwerveModuleState[] rawTargetModuleStates = swerveKinematics.toSwerveModuleStates(io.targetSpeeds);
         SwerveDriveKinematics.desaturateWheelSpeeds(
             rawTargetModuleStates,
             Constants.Drive.MAX_SPEED
         );
-        mPeriodicIO.targetModuleStates = rawTargetModuleStates;
+        io.targetModuleStates = rawTargetModuleStates;
     }
 
-    protected void setModuleTargetStatesPreparing(ChassisSpeeds speeds) {
-        SwerveModuleState[] rawTargetModuleStates = mKinematics.toSwerveModuleStates(mPeriodicIO.targetSpeeds);
+    private void setModuleTargetStatesPreparing(ChassisSpeeds speeds) {
+        SwerveModuleState[] rawTargetModuleStates = swerveKinematics.toSwerveModuleStates(io.targetSpeeds);
         SwerveDriveKinematics.desaturateWheelSpeeds(
             rawTargetModuleStates,
             Constants.Drive.MAX_SPEED
@@ -413,7 +459,7 @@ public class Drive extends RedSubsystemBase {
         for (SwerveModuleState swerveModuleState : rawTargetModuleStates) {
             swerveModuleState.speedMetersPerSecond = 0.0;
         }
-        mPeriodicIO.targetModuleStates = rawTargetModuleStates;
+        io.targetModuleStates = rawTargetModuleStates;
     }
 
     /**
@@ -427,7 +473,7 @@ public class Drive extends RedSubsystemBase {
         double rawOmega = rawSpeeds.omegaRadiansPerSecond;
 
         double rawSpeed = Math.hypot(rawVx, rawVy);
-        double limitedSpeed = mAccelLimiter.calculate(rawSpeed);
+        double limitedSpeed = accelLimiter.calculate(rawSpeed);
         
         double vx = MathUtil.applyDeadband(
             rawVx / rawSpeed * limitedSpeed, Constants.K_EPSILON);
@@ -435,7 +481,7 @@ public class Drive extends RedSubsystemBase {
             rawVy / rawSpeed * limitedSpeed, Constants.K_EPSILON);
 
         double omega = MathUtil.clamp(
-            mRotationAccelLimiter.calculate(rawOmega),
+            rotationAccelLimiter.calculate(rawOmega),
             -Constants.Drive.MAX_ROTATION_SPEED, Constants.Drive.MAX_ROTATION_SPEED
         );
 
@@ -447,17 +493,17 @@ public class Drive extends RedSubsystemBase {
      * @return An array of the {@code SwerveModuleState}s of each swerve module.
      */
     public SwerveModuleState[] getModuleStates() {
-		List<SwerveModuleState> states = new ArrayList<>();
-		for (SwerveModule mod : mSwerveModules) {
-			states.add(mod.getState());
-		}
-		return states.toArray(new SwerveModuleState[]{});
+        List<SwerveModuleState> states = new ArrayList<>();
+		for (SwerveModule swerveModule : swerveModules) {
+            states.add(swerveModule.getState());
+        }
+        return (SwerveModuleState[]) states.toArray();
 	}
 
     @Override
     public void initSendable(SendableBuilder builder) {
         builder.setSmartDashboardType("Subsystem");
-        builder.addStringProperty("/State", () -> mState.name(), null);
-        builder.addStringProperty("/Trajectory", () -> mState == State.PATH_FOLLOWING ? mDriveController.getTrajectory().name : "None", null);
+        builder.addStringProperty("/State", () -> state.name(), null);
+        builder.addStringProperty("/Trajectory", () -> state == State.PATH_FOLLOWING ? driveController.getTrajectory().name : "None", null);
     }
 }

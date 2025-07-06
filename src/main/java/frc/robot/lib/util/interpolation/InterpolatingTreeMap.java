@@ -63,14 +63,10 @@ public class InterpolatingTreeMap<K, V> {
 	 * @param key The key.
 	 * @param value The value.
 	 */
-	public void put(K key, V value) {
+	public synchronized void put(K key, V value) {
 		map.put(key, value);
 		if (map.size() > max) {
-			try {
-				map.remove(map.firstEntry());
-			} catch (Exception e) {
-				System.out.println("This is for appeasing the compiler");
-			}
+			map.remove(map.firstKey());
 		}
 	}
 

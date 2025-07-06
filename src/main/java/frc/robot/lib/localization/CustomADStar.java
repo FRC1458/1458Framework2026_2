@@ -151,6 +151,7 @@ public class CustomADStar {
 
 		if (waypoints.size() < 2) {
 			// Not enough points. Something got borked somewhere
+			System.out.println("bork");
 			return null;
 		}
 

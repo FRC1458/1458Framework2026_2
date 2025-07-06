@@ -187,15 +187,28 @@ public final class Constants {
 		}
     }
 
-	public static final class Tuning {
-		public static final class AngleMotor {
-			public static final Velocity<VoltageUnit> RAMP_RATE = Units.Volts.of(1).per(Units.Second); 
-			public static final Voltage DYNAMIC_VOLTAGE = Units.Volts.of(7);
-		}
+	public static enum Tuning {
+		DriveRotation (
+			Units.Volts.of(1).per(Units.Second),
+			Units.Volts.of(7)),
 
-		public static final class DriveMotor {
-			public static final Velocity<VoltageUnit> RAMP_RATE = Units.Volts.of(1).per(Units.Second); 
-			public static final Voltage DYNAMIC_VOLTAGE = Units.Volts.of(4);
+		DriveTranslation (
+			Units.Volts.of(1).per(Units.Second),
+			Units.Volts.of(7)),
+
+		AngleMotor (
+			Units.Volts.of(1).per(Units.Second),
+			Units.Volts.of(7)),
+
+		DriveMotor (
+			Units.Volts.of(1).per(Units.Second),
+			Units.Volts.of(4));
+
+		public final Velocity<VoltageUnit> RAMP_RATE;
+		public final Voltage DYNAMIC_VOLTAGE;
+		private Tuning(Velocity<VoltageUnit> rampRate, Voltage dynamicVoltage) {
+			RAMP_RATE = rampRate;
+			DYNAMIC_VOLTAGE = dynamicVoltage;
 		}
 	}
 
@@ -229,6 +242,6 @@ public final class Constants {
 								Drive.MAX_ACCEL, 
 								Drive.MAX_ROTATION_SPEED, 
 								Drive.MAX_ROTATION_ACCEL);
-		public static final double GENERATION_WAIT_TIME = 0.4;
+		public static final double GENERATION_WAIT_TIME = 5;
 	}
 }

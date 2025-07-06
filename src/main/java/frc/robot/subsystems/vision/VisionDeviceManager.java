@@ -2,84 +2,87 @@ package frc.robot.subsystems.vision;
 
 import frc.robot.Constants;
 import frc.robot.lib.util.TunableNumber;
-import frc.robot.subsystems.RedSubsystemBase;
 import frc.robot.lib.util.MovingAverage;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
+
 import java.util.List;
 
-public class VisionDeviceManager extends RedSubsystemBase {
+public class VisionDeviceManager extends SubsystemBase {
     public static boolean enabled;
-	public static VisionDeviceManager mVisionDeviceManager;
+	public static VisionDeviceManager visionDeviceManagerInstance;
 	public static VisionDeviceManager getInstance() {
-		return mVisionDeviceManager;
+		if (visionDeviceManagerInstance == null) {
+			visionDeviceManagerInstance = new VisionDeviceManager();
+		}
+		return visionDeviceManagerInstance;
 	}
 
-	private VisionDevice mLeftCamera;
-	private VisionDevice mRightCamera;
-	private VisionDevice mFrontCamera;
-	private VisionDevice mBackCamera;
+	private VisionDevice leftCamera;
+	private VisionDevice rightCamera;
+	private VisionDevice frontCamera;
+	private VisionDevice backCamera;
 
-	private List<VisionDevice> mAllCameras;
+	private List<VisionDevice> cameras;
 
 	private static TunableNumber timestampOffset = new TunableNumber("VisionTimestampOffset", (0.1), false);
 
-	private MovingAverage<Double> mHeadingAvg = new MovingAverage<Double>(
+	private MovingAverage<Double> headingAvg = new MovingAverage<Double>(
 		100, Double.valueOf(0), 
 		(Double x, Double y) -> { return x + y; }, (Double x, Integer y) -> { return x / y; });
-	private double mMovingAvgRead = 0.0;
+	private double movingAvgRead = 0.0;
 
 	private static boolean disable_vision = false;
 
 	public VisionDeviceManager() {
-		mLeftCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.L_CONSTANTS);
-		mRightCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.R_CONSTANTS);
-		mFrontCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.F_CONSTANTS);
-		mBackCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.B_CONSTANTS);
-		mAllCameras = List.of(mLeftCamera, mRightCamera, mFrontCamera, mBackCamera);
-		this.register();
+		leftCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.L_CONSTANTS);
+		rightCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.R_CONSTANTS);
+		frontCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.F_CONSTANTS);
+		backCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.B_CONSTANTS);
+		cameras = List.of(leftCamera, rightCamera, frontCamera, backCamera);
 	}
 
 	@Override
 	public void periodic() {
-		mAllCameras.forEach(VisionDevice::periodic);
-		mMovingAvgRead = mHeadingAvg.getAverage();
-		SmartDashboard.putNumber("Vision heading moving avg", getMovingAverageRead());
+		cameras.forEach(VisionDevice::periodic);
+		movingAvgRead = headingAvg.getAverage();
+		SmartDashboard.putNumber("Vision heading moving avg", getMovingAvgRead());
 		SmartDashboard.putBoolean("vision disabled", visionDisabled());
 	}
 
-	public Double getMovingAverageRead() {
-		return mMovingAvgRead;
+	public Double getMovingAvgRead() {
+		return movingAvgRead;
 	}
 
 	public synchronized MovingAverage<Double> getMovingAverage() {
-		return mHeadingAvg;
+		return headingAvg;
 	}
 
 	public synchronized boolean fullyConnected() {
-		return mLeftCamera.isConnected()
-			&& mRightCamera.isConnected()
-			&& mFrontCamera.isConnected()
-			&& mBackCamera.isConnected();
+		return leftCamera.isConnected()
+			&& rightCamera.isConnected()
+			&& frontCamera.isConnected()
+			&& backCamera.isConnected();
 	}
 
 	public synchronized boolean inRange () {
-		return mFrontCamera.inSnapRange() && mFrontCamera.hasTarget();
+		return frontCamera.inSnapRange() && frontCamera.hasTarget();
 	}
 
 	public synchronized VisionDevice getLeftVision() {
-		return mLeftCamera;
+		return leftCamera;
 	}
 
 	public synchronized VisionDevice getRightVision() {
-		return mRightCamera;
+		return rightCamera;
 	}
 
 	public synchronized VisionDevice getFrontVision() {
-		return mFrontCamera;
+		return frontCamera;
 	}
 
 	public synchronized VisionDevice getBackVision() {
-		return mBackCamera;
+		return backCamera;
 	}
 
 	public static double getTimestampOffset() {

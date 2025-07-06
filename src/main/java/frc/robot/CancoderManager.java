@@ -10,24 +10,24 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.Timer;
 import java.util.Optional;
 
-public class Cancoders {
-	public static Cancoders mCanCoders;
-	public static Cancoders getInstance() {
-		if (mCanCoders == null) {
-			mCanCoders = new Cancoders();
+public class CancoderManager {
+	public static CancoderManager cancodersInstance;
+	public static CancoderManager getInstance() {
+		if (cancodersInstance == null) {
+			cancodersInstance = new CancoderManager();
 		}
-		return mCanCoders;
+		return cancodersInstance;
 	}
 
-	private final CANcoder mFrontLeft;
-	private final CANcoder mFrontRight;
-	private final CANcoder mBackLeft;
-	private final CANcoder mBackRight;
+	private final CANcoder fl;
+	private final CANcoder fr;
+	private final CANcoder bl;
+	private final CANcoder br;
 
-	private final CanTimeObserver mFrontRightObserver;
-	private final CanTimeObserver mFrontLeftObserver;
-	private final CanTimeObserver mBackLeftObserver;
-	private final CanTimeObserver mBackRightObserver;
+	private final CanTimeObserver frObs;
+	private final CanTimeObserver flObs;
+	private final CanTimeObserver blObs;
+	private final CanTimeObserver brObs;
 
 	private static final double BOOT_UP_ERROR_ALLOWANCE_TIME = 10.0;
 
@@ -84,40 +84,40 @@ public class Cancoders {
 		return thisCancoder;
 	}
 
-	public Cancoders() {
-		mFrontLeft = build(Constants.Ports.FL_CANCODER);
-		mFrontLeftObserver = new CanTimeObserver(mFrontLeft);
+	public CancoderManager() {
+		fl = build(Constants.Ports.FL_CANCODER);
+		flObs = new CanTimeObserver(fl);
 
-		mFrontRight = build(Constants.Ports.FR_CANCODER);
-		mFrontRightObserver = new CanTimeObserver(mFrontRight);
+		fr = build(Constants.Ports.FR_CANCODER);
+		frObs = new CanTimeObserver(fr);
 
-		mBackLeft = build(Constants.Ports.BL_CANCODER);
-		mBackLeftObserver = new CanTimeObserver(mBackLeft);
+		bl = build(Constants.Ports.BL_CANCODER);
+		blObs = new CanTimeObserver(bl);
 
-		mBackRight = build(Constants.Ports.BR_CANCODER);
-		mBackRightObserver = new CanTimeObserver(mBackRight);
+		br = build(Constants.Ports.BR_CANCODER);
+		brObs = new CanTimeObserver(br);
 	}
 
 	public boolean allHaveBeenInitialized() {
-		return mFrontLeftObserver.hasUpdate()
-				&& mFrontRightObserver.hasUpdate()
-				&& mBackLeftObserver.hasUpdate()
-				&& mBackRightObserver.hasUpdate();
+		return flObs.hasUpdate()
+				&& frObs.hasUpdate()
+				&& blObs.hasUpdate()
+				&& brObs.hasUpdate();
 	}
 
 	public CANcoder getFrontLeft() {
-		return mFrontLeft;
+		return fl;
 	}
 
 	public CANcoder getFrontRight() {
-		return mFrontRight;
+		return fr;
 	}
 
 	public CANcoder getBackLeft() {
-		return mBackLeft;
+		return bl;
 	}
 
 	public CANcoder getBackRight() {
-		return mBackRight;
+		return br;
 	}
 }

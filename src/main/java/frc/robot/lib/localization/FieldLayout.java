@@ -27,7 +27,7 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
  */
 public class FieldLayout {
 	//TODO: this must be tuned to the specific year's field
-	public static Field2d mField;
+	public static Field2d field;
 	public static final double FIELD_LENGTH = Units.inchesToMeters(651.223);
 	public static final double FIELD_WIDTH = Units.inchesToMeters(323.277);
 
@@ -37,7 +37,7 @@ public class FieldLayout {
 	static {
 		try {
 			APRILTAG_MAP = AprilTagFieldLayout.loadFromResource(AprilTagFields.kDefaultField.m_resourceFile);
-			mField = new Field2d();
+			field = new Field2d();
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}

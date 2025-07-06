@@ -7,25 +7,25 @@ import com.ctre.phoenix6.hardware.Pigeon2;
 import com.ctre.phoenix6.sim.Pigeon2SimState;
 
 import frc.robot.Constants;
-import frc.robot.subsystems.RedSubsystemBase;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 
-public class Pigeon extends RedSubsystemBase {
-	private static Pigeon mPigeon;
+public class Pigeon extends SubsystemBase {
+	private static Pigeon pigeonInstance;
 	public static Pigeon getInstance() {
-		if (mPigeon == null) {
-			mPigeon = new Pigeon(Constants.Ports.PIGEON);
+		if (pigeonInstance == null) {
+			pigeonInstance = new Pigeon(Constants.Ports.PIGEON);
 		}
-		return mPigeon;
+		return pigeonInstance;
 	}
 
-	private final Pigeon2 mGyro;
+	private final Pigeon2 gyro;
 
 	private boolean inverted = Constants.Drive.INVERT_GYRO;
 	private Rotation2d yawAdjustmentAngle = new Rotation2d();
@@ -35,8 +35,8 @@ public class Pigeon extends RedSubsystemBase {
 	private double simAngularVelocity = 0.0;
 
 	private Pigeon(Constants.Ports constants) {
-		mGyro = new Pigeon2(constants.id, constants.bus);
-		mGyro.getConfigurator().apply(new Pigeon2Configuration());
+		gyro = new Pigeon2(constants.id, constants.bus);
+		gyro.getConfigurator().apply(new Pigeon2Configuration());
 	}
 
 	public Rotation2d getYaw() {
@@ -92,19 +92,19 @@ public class Pigeon extends RedSubsystemBase {
 	}
 
 	public Rotation2d getUnadjustedPitch() {
-		return Rotation2d.fromDegrees(mGyro.getRoll().getValueAsDouble());
+		return Rotation2d.fromDegrees(gyro.getRoll().getValueAsDouble());
 	}
 
 	public Rotation2d getUnadjustedRoll() {
-		return Rotation2d.fromDegrees(mGyro.getPitch().getValueAsDouble());
+		return Rotation2d.fromDegrees(gyro.getPitch().getValueAsDouble());
 	}
 
 	public StatusSignal<Angle> getYawStatusSignal() {
-		return mGyro.getYaw();
+		return gyro.getYaw();
 	}
 
 	public StatusSignal<AngularVelocity> getRateStatusSignal() {
-		return mGyro.getAngularVelocityZDevice(); 
+		return gyro.getAngularVelocityZDevice(); 
 	}
 
 	public void setSimAngularVelocity(double angularVelocity) {
@@ -113,7 +113,7 @@ public class Pigeon extends RedSubsystemBase {
 
 	@Override
 	public void simulationPeriodic() {
-		Pigeon2SimState gyroSimState = mGyro.getSimState();
+		Pigeon2SimState gyroSimState = gyro.getSimState();
 
 		gyroSimState.setSupplyVoltage(RobotController.getBatteryVoltage());
 

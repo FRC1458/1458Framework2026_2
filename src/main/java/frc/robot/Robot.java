@@ -7,14 +7,10 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.Controllers;
 import frc.robot.commands.*;
-import frc.robot.subsystems.ExampleSubsystem;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.vision.VisionDeviceManager;
 
@@ -24,25 +20,30 @@ import frc.robot.subsystems.vision.VisionDeviceManager;
  * this project, you must also update the Main.java file in the project.
  */
 public class Robot extends TimedRobot {
-	private final CommandScheduler mCommandScheduler;
-	private Command mAutoCommand;
+	private static final CommandScheduler commandScheduler = CommandScheduler.getInstance();;
+	private static Command autoCommand;
 
-	private final ExampleSubsystem mExampleSubsystem = new ExampleSubsystem();
-
-	private final CommandXboxController mController =
+	private static final CommandXboxController controller =
 		new CommandXboxController(Controllers.DRIVER_CONTROLLER_PORT);
+
+	public static CommandXboxController getController() {
+		return controller;
+	}
 	/**
 	 * This function is run when the robot is first started up and should be used for any
 	 * initialization code.
 	 */
 	public Robot() {
-		mCommandScheduler = CommandScheduler.getInstance();
-
+		if (Robot.isSimulation()) {
+			// TODO: remove this
+			DriverStationSim.setAllianceStationId(AllianceStationID.Blue1);
+		}
+		
 		RobotState.reset(Timer.getFPGATimestamp(), new Pose2d());
 		RobotState.resetKalman();
 
-		new Drive();
-		new VisionDeviceManager();
+		Drive.getInstance();
+		VisionDeviceManager.getInstance();
 	}
 
 	/**
@@ -58,7 +59,7 @@ public class Robot extends TimedRobot {
 		// commands, running already-scheduled commands, removing finished or interrupted commands,
 		// and running subsystem periodic() methods.  This must be called from the robot's periodic
 		// block in order for anything in the Command-based framework to work.
-		mCommandScheduler.run();
+		commandScheduler.run();
 	}
 
 	/** This function is called once each time the robot enters Disabled mode. */
@@ -77,10 +78,10 @@ public class Robot extends TimedRobot {
 	@Override
 	public void autonomousInit() {
 		RobotState.setAlliance(DriverStation.getAlliance());
-		mAutoCommand = Autos.driveAuto();
+		autoCommand = Autos.driveAuto();
 
-		if (mAutoCommand != null) {
-			mAutoCommand.schedule();
+		if (autoCommand != null) {
+			autoCommand.schedule();
 		}
 	}
 
@@ -99,17 +100,12 @@ public class Robot extends TimedRobot {
 	@Override
 	public void teleopInit() {
 		// This makes sure that the autonomous stops running when teleop starts running. 
-		if (mAutoCommand != null) {
-			mAutoCommand.cancel();
+		if (autoCommand != null) {
+			autoCommand.cancel();
 		}
 
-		new Trigger(mExampleSubsystem::exampleCondition)
-			.onTrue(new ExampleCommand(mExampleSubsystem));
-
-		mController.b().whileTrue(mExampleSubsystem.exampleMethodCommand());
-		Drive.getInstance().setDefaultCommand(Drive.getInstance().teleopCommand(mController::getLeftY, mController::getLeftX, mController::getRightY));
-		mController.a().onTrue(Commands.runOnce(() -> DriverStationSim.setAllianceStationId(AllianceStationID.Blue1)));
-		mController.x().onTrue(Drive.getInstance().driveToPoseCommand(
+		Drive.getInstance().setDefaultCommand(Drive.getInstance().teleopCommand());
+		controller.b().onTrue(Drive.getInstance().driveToPoseCommand(
 			new Pose2d(5.0, 5.0, Rotation2d.fromDegrees(80))));
 	}
 

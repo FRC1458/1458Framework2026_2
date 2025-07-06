@@ -11,7 +11,7 @@ import java.util.List;
  * Contains basic functions that are used often.
  */
 public class Util {
-	public static final double kEpsilon = 1e-12;
+	public static final double EPSILON = 1e-12;
 
 	/**
 	 * Prevent this class from being instantiated.
@@ -62,7 +62,7 @@ public class Util {
 		}
 
 		public static boolean epsilonEquals(double a, double b) {
-			return epsilonEquals(a, b, kEpsilon);
+			return epsilonEquals(a, b, EPSILON);
 		}
 
 		public static boolean epsilonEquals(int a, int b, int epsilon) {

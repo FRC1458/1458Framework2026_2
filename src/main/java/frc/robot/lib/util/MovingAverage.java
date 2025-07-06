@@ -7,11 +7,11 @@ import java.util.function.BiFunction;
  * Helper class for storing and calculating a moving average
  */
 public class MovingAverage<T> {
-    ArrayList<T> current = new ArrayList<T>();
-    int maxSize;
-    BiFunction<T, T, T> addFunction;
-    BiFunction<T, Integer, T> divideFunction;
-    T zero;
+    private ArrayList<T> current = new ArrayList<T>();
+    private int maxSize;
+    private BiFunction<T, T, T> addFunction;
+    private BiFunction<T, Integer, T> divideFunction;
+    private T zero;
 
     /**
      * Generates a MovingAverage object

@@ -15,16 +15,16 @@ import frc.robot.lib.control.ProfiledPIDVController;
 import frc.robot.lib.trajectory.RedTrajectory;
 
 public class PIDHolonomicDriveController implements DriveController {
-    private final PIDVController mXController;
-    private final PIDVController mYController;
-    private final ProfiledPIDVController mThetaController;
+    private final PIDVController xController;
+    private final PIDVController yController;
+    private final ProfiledPIDVController thetaController;
     private double accelConstant;
 
-    private RedTrajectory mTrajectory;
+    private RedTrajectory trajectory;
     private Pose2d currentPose;
     private ChassisSpeeds currentSpeeds;
 
-    private Timer mTimer = null;
+    private Timer timer = null;
 
     static Field2d field = new Field2d();
     static {
@@ -38,24 +38,24 @@ public class PIDHolonomicDriveController implements DriveController {
      * @param accelConstant The acceleration feedforwards (useful for traversing sharp turns on a trajectory).
      */
     public PIDHolonomicDriveController(PIDFConstants translationConstants, ProfiledPIDFConstants rotationConstants, double accelConstant) {
-        mXController = new PIDVController(translationConstants);
-        mYController = new PIDVController(translationConstants);
+        xController = new PIDVController(translationConstants);
+        yController = new PIDVController(translationConstants);
 
-        mThetaController = new ProfiledPIDVController(
+        thetaController = new ProfiledPIDVController(
                 rotationConstants);
                 
-        mThetaController.enableContinuousInput(-Math.PI, Math.PI);
+        thetaController.enableContinuousInput(-Math.PI, Math.PI);
 
         this.accelConstant = accelConstant;
 
-        mTimer = new Timer();
+        timer = new Timer();
     }
 
     @Override
     public void setTrajectory(RedTrajectory trajectory) {
-        this.mTrajectory = trajectory;
-        mTimer.reset();
-        mTimer.start();
+        this.trajectory = trajectory;
+        timer.reset();
+        timer.start();
     }
 
     public void setRobotState(Pose2d pose, Twist2d speeds) {
@@ -69,11 +69,11 @@ public class PIDHolonomicDriveController implements DriveController {
 
     @Override
     public ChassisSpeeds getOutput() {
-        if (mTrajectory == null || currentPose == null || currentSpeeds == null || mTrajectory.isDone()) {
+        if (trajectory == null || currentPose == null || currentSpeeds == null || trajectory.isDone()) {
             return new ChassisSpeeds();
         }
 
-        RedTrajectory.State targetState = mTrajectory.advanceTo(mTimer.get());
+        RedTrajectory.State targetState = trajectory.advanceTo(timer.get());
 
         double vxFF = targetState.speeds.vxMetersPerSecond;
         double vyFF = targetState.speeds.vyMetersPerSecond;
@@ -91,25 +91,25 @@ public class PIDHolonomicDriveController implements DriveController {
         xAccelFF += -angularAccel * targetState.pose.getRotation().getSin();
         yAccelFF += angularAccel * targetState.pose.getRotation().getCos();
 
-        mXController.setTarget(targetState.pose.getX());
-        mYController.setTarget(targetState.pose.getY());
+        xController.setTarget(targetState.pose.getX());
+        yController.setTarget(targetState.pose.getY());
 
-        mXController.setFeedforward(vxFF);
-        mYController.setFeedforward(vyFF);
+        xController.setFeedforward(vxFF);
+        yController.setFeedforward(vyFF);
 
-        mXController.setInput(new Pair<Double, Double>(currentPose.getX(), currentSpeeds.vxMetersPerSecond));
-        mYController.setInput(new Pair<Double, Double>(currentPose.getY(), currentSpeeds.vyMetersPerSecond));
+        xController.setInput(new Pair<Double, Double>(currentPose.getX(), currentSpeeds.vxMetersPerSecond));
+        yController.setInput(new Pair<Double, Double>(currentPose.getY(), currentSpeeds.vyMetersPerSecond));
 
-        double vx = mXController.getOutput();
-        double vy = mYController.getOutput();
+        double vx = xController.getOutput();
+        double vy = yController.getOutput();
 
-        mThetaController.setTarget(targetState.pose.getRotation().getRadians());
-        mThetaController.setFeedforward(targetState.speeds.omegaRadiansPerSecond);
-        mThetaController.setInput(
+        thetaController.setTarget(targetState.pose.getRotation().getRadians());
+        thetaController.setFeedforward(targetState.speeds.omegaRadiansPerSecond);
+        thetaController.setInput(
             new Pair<Double, Double>(
                 currentPose.getRotation().getRadians(), currentSpeeds.omegaRadiansPerSecond));
 
-        double rotation = mThetaController.getOutput();
+        double rotation = thetaController.getOutput();
 
         field.setRobotPose(targetState.pose);
 		SmartDashboard.putData("debug", field);
@@ -123,9 +123,9 @@ public class PIDHolonomicDriveController implements DriveController {
 
     @Override
     public boolean isDone() {
-        if (mTrajectory == null) return true;
-        if (mTrajectory.isDone()) {
-            System.out.println("Done with trajectory, error: " + Math.hypot(mXController.error, mYController.error));
+        if (trajectory == null) return true;
+        if (trajectory.isDone()) {
+            System.out.println("Done with trajectory, error: " + Math.hypot(xController.error, yController.error));
             return true;
         }
         return false;
@@ -133,22 +133,22 @@ public class PIDHolonomicDriveController implements DriveController {
 
     @Override
     public void reset() {
-        mXController.reset();
-        mYController.reset();
-        mThetaController.reset();
+        xController.reset();
+        yController.reset();
+        thetaController.reset();
     
-        mTrajectory = null;
+        trajectory = null;
         currentPose = null;
         currentSpeeds = null;
     
-        if (mTimer != null) {
-            mTimer.stop();
-            mTimer.reset();
+        if (timer != null) {
+            timer.stop();
+            timer.reset();
         }
     }
 
     @Override
     public RedTrajectory getTrajectory() {
-        return mTrajectory;
+        return trajectory;
     }
 }

@@ -140,8 +140,8 @@ public class RedTrajectory {
         }
     }
     
-    public Trajectory<SwerveSample> mChoreoTrajectory;
-    public PathPlannerTrajectory mPathplannerTrajectory;
+    public Trajectory<SwerveSample> choreoTrajectory;
+    public PathPlannerTrajectory pathplannerTrajectory;
 
     public double progress = 0.0;
     public boolean flipped;
@@ -153,7 +153,7 @@ public class RedTrajectory {
      * @param flipForAlliance Whether to flip the trajectory based on the current alliance.
      */
     public RedTrajectory(Trajectory<SwerveSample> traj, boolean flipForAlliance) {
-        mChoreoTrajectory = traj;
+        choreoTrajectory = traj;
         this.type = TrajectoryType.CHOREO;        
         this.flipped = flipForAlliance && RobotState.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
         this.name = "ChoreoTrajectory#" + traj.name();
@@ -165,7 +165,7 @@ public class RedTrajectory {
      * @param flipForAlliance Whether to flip the trajectory based on the current alliance.
      */
     public RedTrajectory(PathPlannerTrajectory traj, boolean flipForAlliance) {
-        mPathplannerTrajectory = traj;
+        pathplannerTrajectory = traj;
         this.type = TrajectoryType.PATHPLANNER;
         this.flipped = flipForAlliance && RobotState.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
         this.name = "PathPlannerTrajectory#" + traj.hashCode();
@@ -177,7 +177,7 @@ public class RedTrajectory {
      * @param flipForAlliance Whether to flip the trajectory based on the current alliance.
      */
     public RedTrajectory(PathPlannerTrajectory traj, boolean flipForAlliance, String name) {
-        mPathplannerTrajectory = traj;
+        pathplannerTrajectory = traj;
         this.type = TrajectoryType.PATHPLANNER;
         this.flipped = flipForAlliance && RobotState.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
         this.name = "PathPlannerTrajectory#" + name;
@@ -190,9 +190,9 @@ public class RedTrajectory {
     public State getInitialState() {
         return switch (type) {
             case CHOREO ->
-                new State(mChoreoTrajectory.getInitialSample(false).get());
+                new State(choreoTrajectory.getInitialSample(false).get());
             case PATHPLANNER ->
-                new State(mPathplannerTrajectory.getInitialState());
+                new State(pathplannerTrajectory.getInitialState());
             default ->
                 new State();
         };
@@ -205,9 +205,9 @@ public class RedTrajectory {
     public State getFinalState() {
         return switch (type) {
             case CHOREO ->
-                new State(mChoreoTrajectory.getFinalSample(false).get());
+                new State(choreoTrajectory.getFinalSample(false).get());
             case PATHPLANNER ->
-                new State(mPathplannerTrajectory.getEndState());
+                new State(pathplannerTrajectory.getEndState());
             default ->
                 new State();
         };
@@ -221,9 +221,9 @@ public class RedTrajectory {
     public State advance(double seconds) {
         this.progress += seconds;
         if (this.type == TrajectoryType.CHOREO) {
-            this.progress = MathUtil.clamp(progress, 0.0, mChoreoTrajectory.getTotalTime());
+            this.progress = MathUtil.clamp(progress, 0.0, choreoTrajectory.getTotalTime());
         } else if (this.type == TrajectoryType.PATHPLANNER) {
-            this.progress = MathUtil.clamp(progress, 0.0, mPathplannerTrajectory.getTotalTimeSeconds());
+            this.progress = MathUtil.clamp(progress, 0.0, pathplannerTrajectory.getTotalTimeSeconds());
         }
         return sample(this.progress);
     }
@@ -236,9 +236,9 @@ public class RedTrajectory {
     public State advanceTo(double seconds) {
         this.progress = seconds;
         if (this.type == TrajectoryType.CHOREO) {
-            this.progress = MathUtil.clamp(progress, 0.0, mChoreoTrajectory.getTotalTime());
+            this.progress = MathUtil.clamp(progress, 0.0, choreoTrajectory.getTotalTime());
         } else if (this.type == TrajectoryType.PATHPLANNER) {
-            this.progress = MathUtil.clamp(progress, 0.0, mPathplannerTrajectory.getTotalTimeSeconds());
+            this.progress = MathUtil.clamp(progress, 0.0, pathplannerTrajectory.getTotalTimeSeconds());
         }
         return sample(this.progress);
     }
@@ -258,9 +258,9 @@ public class RedTrajectory {
     public boolean isDone() {
         return switch (type) {
             case PATHPLANNER ->
-                mPathplannerTrajectory.getTotalTimeSeconds() <= progress;
+                pathplannerTrajectory.getTotalTimeSeconds() <= progress;
             case CHOREO ->
-                mChoreoTrajectory.getTotalTime() <= progress;
+                choreoTrajectory.getTotalTime() <= progress;
             default -> true;
         };
     }
@@ -272,9 +272,9 @@ public class RedTrajectory {
     public double getTotalTime() {
         return switch (type) {
             case PATHPLANNER ->
-                mPathplannerTrajectory.getTotalTimeSeconds();
+                pathplannerTrajectory.getTotalTimeSeconds();
             case CHOREO ->
-                mChoreoTrajectory.getTotalTime();
+                choreoTrajectory.getTotalTime();
             default -> 0.0;
         };
     }
@@ -289,16 +289,16 @@ public class RedTrajectory {
         switch (type) {
             case PATHPLANNER:
                 State state = new State(
-                    mPathplannerTrajectory.sample(timestamp),
-                    mPathplannerTrajectory.sample(
+                    pathplannerTrajectory.sample(timestamp),
+                    pathplannerTrajectory.sample(
                         MathUtil.clamp(
                             timestamp + Constants.DT,
                             0.0, 
-                            mPathplannerTrajectory.getTotalTimeSeconds())));
+                            pathplannerTrajectory.getTotalTimeSeconds())));
                 return flipped ? state.flip() : state;
             case CHOREO:
                 State state2 = new State(
-                    mChoreoTrajectory.sampleAt(timestamp, false).get());
+                    choreoTrajectory.sampleAt(timestamp, false).get());
                 return flipped ? state2.flip() : state2;
             default:
                 return new State();

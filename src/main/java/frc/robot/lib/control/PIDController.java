@@ -5,7 +5,7 @@ import edu.wpi.first.wpilibj.Timer;
 import frc.robot.lib.control.ControlConstants.*;
 
 public class PIDController implements Controller<Double, Double> {
-    private final PIDFConstants mConstants;
+    private final PIDFConstants constants;
 
     private double target = 0.0;
     private double measurement = 0.0;
@@ -19,15 +19,15 @@ public class PIDController implements Controller<Double, Double> {
     private double minInput = 0.0;
     private double maxInput = 0.0;
 
-    private final Timer mDtTracker = new Timer();
+    private final Timer timer = new Timer();
 
     /** 
      * A PID(F) controller. It works by acting like a dampened string, pulling the output towards a target point.
      * @param constants The {@link PIDFConstants}.
      */
     public PIDController(PIDFConstants constants) {
-        this.mConstants = constants;
-        mDtTracker.start();
+        this.constants = constants;
+        timer.start();
     }
     /** 
      * A PID controller. It works by acting like a dampened string, pulling the output towards a target point.
@@ -69,8 +69,8 @@ public class PIDController implements Controller<Double, Double> {
 
     @Override
     public Double getOutput() {
-        double dt = mDtTracker.get();
-        mDtTracker.reset();
+        double dt = timer.get();
+        timer.reset();
         if (dt <= 0.0) {
             return 0.0;
         }
@@ -88,10 +88,10 @@ public class PIDController implements Controller<Double, Double> {
         double derivative = (error - prevError) / dt;
         prevError = error;
 
-        return mConstants.kP * error
-             + mConstants.kI * integral
-             + mConstants.kD * derivative
-             + mConstants.kF * feedforward;
+        return constants.kP * error
+             + constants.kI * integral
+             + constants.kD * derivative
+             + constants.kF * feedforward;
     }
 
     /** Sets the integral value. */
@@ -105,7 +105,7 @@ public class PIDController implements Controller<Double, Double> {
         error = 0.0;
         prevError = 0.0;
         feedforward = 0.0;
-        mDtTracker.reset();
-        mDtTracker.start();
+        timer.reset();
+        timer.start();
     }    
 }

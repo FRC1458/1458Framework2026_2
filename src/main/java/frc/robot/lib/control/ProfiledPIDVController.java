@@ -6,7 +6,7 @@ import edu.wpi.first.wpilibj.Timer;
 import frc.robot.lib.control.ControlConstants.*;
 
 public class ProfiledPIDVController implements Controller<Pair<Double, Double>, Double> {
-    private final ProfiledPIDFConstants mConstants;
+    private final ProfiledPIDFConstants constants;
 
     private double target = 0.0;
     private Pair<Double, Double> measurement = new Pair<>(0.0, 0.0);
@@ -19,15 +19,15 @@ public class ProfiledPIDVController implements Controller<Pair<Double, Double>, 
     private double minRange = 0.0;
     private double maxRange = 0.0;
 
-    private final Timer mDtTracker = new Timer();
+    private final Timer timer = new Timer();
 
     /**
      * A {@link PIDVController} with a trapezoid profile, used for limiting speed and acceleration.
      * @param constants The {@link ProfiledPIDFConstants}.
      */
     public ProfiledPIDVController(ProfiledPIDFConstants constants) {
-        this.mConstants = constants;
-        mDtTracker.start();
+        this.constants = constants;
+        timer.start();
     }
 
     /**
@@ -63,8 +63,8 @@ public class ProfiledPIDVController implements Controller<Pair<Double, Double>, 
 
     @Override
     public Double getOutput() {
-        double dt = mDtTracker.get();
-        mDtTracker.reset();
+        double dt = timer.get();
+        timer.reset();
         if (dt <= 0.0) return 0.0;
 
         double position = measurement.getFirst();
@@ -78,10 +78,10 @@ public class ProfiledPIDVController implements Controller<Pair<Double, Double>, 
         double derivative = feedforward - velocity;
 
 
-        return mConstants.kP * error
-             + mConstants.kI * integral
-             + mConstants.kD * derivative
-             + mConstants.kF * feedforward;
+        return constants.kP * error
+             + constants.kI * integral
+             + constants.kD * derivative
+             + constants.kF * feedforward;
     }
 
     /** Sets the integral value. */
@@ -94,7 +94,7 @@ public class ProfiledPIDVController implements Controller<Pair<Double, Double>, 
         integral = 0.0;
         feedforward = 0.0;
         error = 0.0;
-        mDtTracker.reset();
-        mDtTracker.start();
+        timer.reset();
+        timer.start();
     }
 }

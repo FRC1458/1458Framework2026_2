@@ -1,7 +1,5 @@
 package frc.robot.subsystems.drive;
 
-import static edu.wpi.first.units.Units.Volts;
-
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.controls.*;
@@ -23,20 +21,18 @@ import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.lib.drivers.TalonFXManager;
 import frc.robot.Constants;
 import frc.robot.lib.util.Conversions;
-import frc.robot.subsystems.RedSubsystemBase;
 
-public class SwerveModule extends RedSubsystemBase {
+public class SwerveModule extends SubsystemBase {
     public final String name;
-    private final Constants.Drive.Modules mConstants;
 	private BaseStatusSignal[] mSignals = new BaseStatusSignal[4];
 
-    private PeriodicIO mPeriodicIO = new PeriodicIO();
-    private static class PeriodicIO {		// Inputs
-		public double timestamp = 0.0;
+    private SwerveModuleIO io = new SwerveModuleIO();
+    public static class SwerveModuleIO {
 		public double rotationPosition = 0.0;
 		public double rotationVelocity = 0.0;
 		public double drivePosition = 0.0;
@@ -49,43 +45,42 @@ public class SwerveModule extends RedSubsystemBase {
         ControlRequest driveRequest = new NeutralOut();
     }
 
-    private TuningType mTuningType = TuningType.NONE;
-    public static enum TuningType {
-        NONE,
-        ANGLE,
-        DRIVE
+    private State state = State.DEFAULT;
+    public static enum State {
+        DEFAULT,
+        ANGLE_TUNING,
+        DRIVE_TUNING
     }
 
-    private TalonFX mAngleMotor;
-    private TalonFX mDriveMotor;
-    private CANcoder mCanCoder;
+    private TalonFX angleMotor;
+    private TalonFX driveMotor;
+    private CANcoder cancoder;
     
-    private DCMotorSim mAngleMotorSim;
-    private DCMotorSim mDriveMotorSim;
+    private DCMotorSim angleMotorSim;
+    private DCMotorSim driveMotorSim;
 
-    public SwerveModule(Constants.Drive.Modules constants, CANcoder canCoder) {
+    public SwerveModule(Constants.Drive.Modules constants, CANcoder cancoder) {
         name = constants.name();
         setName("Module " + name);
-        mConstants = constants;
 
-        mAngleMotor = TalonFXManager.createMotor(name + " Angle Motor", constants.angleMotorID, "Angle");
-        mDriveMotor = TalonFXManager.createMotor(name + " Drive Motor", constants.driveMotorID, "Drive");
+        angleMotor = TalonFXManager.createMotor(name + " Angle Motor", constants.angleMotorID, "Angle");
+        driveMotor = TalonFXManager.createMotor(name + " Drive Motor", constants.driveMotorID, "Drive");
 
-        mDriveMotorSim = new DCMotorSim(
+        driveMotorSim = new DCMotorSim(
 			LinearSystemId.createDCMotorSystem(
 				DCMotor.getKrakenX60Foc(1), 0.001, Constants.Drive.DRIVE_GEAR_RATIO),
 				DCMotor.getKrakenX60Foc(1));
-		mAngleMotorSim = new DCMotorSim(
+		angleMotorSim = new DCMotorSim(
 			LinearSystemId.createDCMotorSystem(
 				DCMotor.getKrakenX60Foc(1), 0.001, Constants.Drive.ANGLE_GEAR_RATIO),
 				DCMotor.getFalcon500Foc(1));
 
-        mCanCoder = canCoder;
+        this.cancoder = cancoder;
 
-        mSignals[0] = mDriveMotor.getRotorPosition();
-		mSignals[1] = mDriveMotor.getRotorVelocity();
-		mSignals[2] = mAngleMotor.getRotorPosition();
-		mSignals[3] = mAngleMotor.getRotorVelocity();
+        mSignals[0] = driveMotor.getRotorPosition();
+		mSignals[1] = driveMotor.getRotorVelocity();
+		mSignals[2] = angleMotor.getRotorPosition();
+		mSignals[3] = angleMotor.getRotorVelocity();
         SmartDashboard.putData(this);
     }
 
@@ -94,71 +89,71 @@ public class SwerveModule extends RedSubsystemBase {
      * @param state The target {@code SwerveModuleState}.
      */
     public void setTargetState(SwerveModuleState state) {
-        mPeriodicIO.targetState = state;
+        io.targetState = state;
     }
 
     @Override
     public void periodic() {
-        switch (mTuningType) {
-            case NONE:
-                setVelocity(mPeriodicIO.targetState);
+        switch (state) {
+            case DEFAULT:
+                setVelocity(io.targetState);
                 break;
-            case ANGLE:
+            case ANGLE_TUNING:
                 break;
-            case DRIVE:
+            case DRIVE_TUNING:
                 break;
             default:
-                setVelocity(mPeriodicIO.targetState);
+                setVelocity(io.targetState);
                 break;
         }
 
-        mAngleMotor.setControl(mPeriodicIO.angleRequest);
-        mDriveMotor.setControl(mPeriodicIO.driveRequest);
+        angleMotor.setControl(io.angleRequest);
+        driveMotor.setControl(io.driveRequest);
 
-        Rotation2d angleRotation = new Rotation2d(mCanCoder.getPosition().getValue());
+        Rotation2d angleRotation = new Rotation2d(cancoder.getPosition().getValue());
         double wheelSpeed = Conversions.RPSToMPS(
-                mDriveMotor.getVelocity().getValueAsDouble(),
+                driveMotor.getVelocity().getValueAsDouble(),
                 Constants.Drive.WHEEL_CIRCUMFERENCE,
                 Constants.Drive.DRIVE_GEAR_RATIO);
 
-        mPeriodicIO.currentState = new SwerveModuleState(wheelSpeed, angleRotation);
+        io.currentState = new SwerveModuleState(wheelSpeed, angleRotation);
     }
 
     @Override
     public void simulationPeriodic() {
-        TalonFXSimState mDriveMotorSimState = mDriveMotor.getSimState();
-        TalonFXSimState mAngleMotorSimState = mAngleMotor.getSimState();
-        CANcoderSimState angleEncoderSimState = mCanCoder.getSimState();
+        TalonFXSimState mDriveMotorSimState = driveMotor.getSimState();
+        TalonFXSimState mAngleMotorSimState = angleMotor.getSimState();
+        CANcoderSimState angleEncoderSimState = cancoder.getSimState();
         double batteryVoltage = RobotController.getBatteryVoltage();
         mDriveMotorSimState.setSupplyVoltage(batteryVoltage);
         mAngleMotorSimState.setSupplyVoltage(batteryVoltage);
         angleEncoderSimState.setSupplyVoltage(batteryVoltage);
 
-        mDriveMotorSim.setInputVoltage(mDriveMotorSimState.getMotorVoltageMeasure().in(Volts));
-        mDriveMotorSim.update(TimedRobot.kDefaultPeriod);
+        driveMotorSim.setInputVoltage(mDriveMotorSimState.getMotorVoltageMeasure().in(Units.Volts));
+        driveMotorSim.update(TimedRobot.kDefaultPeriod);
         mDriveMotorSimState.setRawRotorPosition(
-            mDriveMotorSim.getAngularPosition().times(Constants.Drive.DRIVE_GEAR_RATIO));
+            driveMotorSim.getAngularPosition().times(Constants.Drive.DRIVE_GEAR_RATIO));
         mDriveMotorSimState.setRotorVelocity(
-            mDriveMotorSim.getAngularVelocity().times(Constants.Drive.DRIVE_GEAR_RATIO));
+            driveMotorSim.getAngularVelocity().times(Constants.Drive.DRIVE_GEAR_RATIO));
 
-        mAngleMotorSim.setInputVoltage(mAngleMotorSimState.getMotorVoltageMeasure().in(Volts));
-        mAngleMotorSim.update(Constants.DT);
+        angleMotorSim.setInputVoltage(mAngleMotorSimState.getMotorVoltageMeasure().in(Units.Volts));
+        angleMotorSim.update(Constants.DT);
         mAngleMotorSimState.setRawRotorPosition(
-            mAngleMotorSim.getAngularPosition().times(Constants.Drive.ANGLE_GEAR_RATIO));
+            angleMotorSim.getAngularPosition().times(Constants.Drive.ANGLE_GEAR_RATIO));
         mAngleMotorSimState.setRotorVelocity(
-            mAngleMotorSim.getAngularVelocity().times(Constants.Drive.ANGLE_GEAR_RATIO));
+            angleMotorSim.getAngularVelocity().times(Constants.Drive.ANGLE_GEAR_RATIO));
 
         angleEncoderSimState.setRawPosition(
-            mAngleMotorSim.getAngularPosition());
+            angleMotorSim.getAngularPosition());
         angleEncoderSimState.setVelocity(
-            mAngleMotorSim.getAngularVelocity());
+            angleMotorSim.getAngularVelocity());
     }
 
     /**
      * Gets the current state of the module.
      */
     public SwerveModuleState getState() {
-        return mPeriodicIO.currentState;
+        return io.currentState;
     }
 
     /**
@@ -167,17 +162,17 @@ public class SwerveModule extends RedSubsystemBase {
      */
     public void setVelocity(SwerveModuleState targetState) {
         boolean flip = setSteeringAngleOptimized(targetState.angle.unaryMinus());
-        mPeriodicIO.targetDriveVelocity = targetState.speedMetersPerSecond * (flip ? -1.0 : 1.0);
+        io.targetDriveVelocity = targetState.speedMetersPerSecond * (flip ? -1.0 : 1.0);
 
         double rotorSpeed = Conversions.MPSToRPS(
-                mPeriodicIO.targetDriveVelocity,
+                io.targetDriveVelocity,
                 Constants.Drive.WHEEL_CIRCUMFERENCE,
                 Constants.Drive.DRIVE_GEAR_RATIO);
 
         if (Math.abs(rotorSpeed) < 0.01) {
-            mPeriodicIO.driveRequest = new NeutralOut();
+            io.driveRequest = new NeutralOut();
         } else {
-            mPeriodicIO.driveRequest = new VelocityVoltage(rotorSpeed);
+            io.driveRequest = new VelocityVoltage(rotorSpeed);
         }
     }
 
@@ -189,7 +184,7 @@ public class SwerveModule extends RedSubsystemBase {
     private boolean setSteeringAngleOptimized(Rotation2d targetAngle) {
         boolean flip = false;
 
-        double currentAngleDegrees = mCanCoder.getPosition().getValueAsDouble() * 360.0;
+        double currentAngleDegrees = cancoder.getPosition().getValueAsDouble() * 360.0;
         Rotation2d currentAngle = Rotation2d.fromDegrees(currentAngleDegrees);
 
         Rotation2d delta = targetAngle.minus(currentAngle);
@@ -213,16 +208,17 @@ public class SwerveModule extends RedSubsystemBase {
      */
     private void setSteeringAngleRaw(double angleDegrees) {
         double rotorPosition = Conversions.degreesToRotation(angleDegrees, Constants.Drive.ANGLE_GEAR_RATIO);
-        mPeriodicIO.angleRequest = new PositionVoltage(rotorPosition);
+        io.angleRequest = new PositionVoltage(rotorPosition);
     }
 
     public synchronized void refreshSignals() {
- 		mPeriodicIO.rotationVelocity = mAngleMotor.getRotorVelocity().getValueAsDouble();
-		mPeriodicIO.driveVelocity = mDriveMotor.getRotorVelocity().getValueAsDouble();
+ 		io.rotationVelocity = angleMotor.getRotorVelocity().getValueAsDouble();
+		io.driveVelocity = driveMotor.getRotorVelocity().getValueAsDouble();
 
-		mPeriodicIO.rotationPosition = BaseStatusSignal.getLatencyCompensatedValueAsDouble(
-				mAngleMotor.getRotorPosition(), mAngleMotor.getRotorVelocity());
-		mPeriodicIO.drivePosition = mDriveMotor.getRotorPosition().getValueAsDouble();
+		io.rotationPosition = BaseStatusSignal.getLatencyCompensatedValueAsDouble(
+            angleMotor.getRotorPosition(), angleMotor.getRotorVelocity());
+		io.drivePosition = BaseStatusSignal.getLatencyCompensatedValueAsDouble(
+            driveMotor.getRotorPosition(), driveMotor.getRotorVelocity());
 	}
 
     /**
@@ -231,9 +227,9 @@ public class SwerveModule extends RedSubsystemBase {
      */
     public double getDriveDistance() {
 		return Conversions.rotationsToMeters(
-				mPeriodicIO.drivePosition,
-				Constants.Drive.WHEEL_CIRCUMFERENCE,
-				Constants.Drive.DRIVE_GEAR_RATIO);
+            io.drivePosition,
+            Constants.Drive.WHEEL_CIRCUMFERENCE,
+            Constants.Drive.DRIVE_GEAR_RATIO);
 	}
 
     /**
@@ -242,7 +238,7 @@ public class SwerveModule extends RedSubsystemBase {
      */
     public double getDriveSpeed() {
         return Conversions.RPSToMPS(
-            mPeriodicIO.driveVelocity,
+            io.driveVelocity,
             Constants.Drive.WHEEL_CIRCUMFERENCE,
             Constants.Drive.DRIVE_GEAR_RATIO);
     }
@@ -260,7 +256,7 @@ public class SwerveModule extends RedSubsystemBase {
      * @return The angle, in degrees.
      */
     public double getModuleAngleDegrees() {
-		return Conversions.rotationsToDegrees(mPeriodicIO.rotationPosition, Constants.Drive.ANGLE_GEAR_RATIO);
+		return Conversions.rotationsToDegrees(io.rotationPosition, Constants.Drive.ANGLE_GEAR_RATIO);
 	}
 
     /**
@@ -268,7 +264,7 @@ public class SwerveModule extends RedSubsystemBase {
      * @return The speed, in degrees per second.
      */
     public double getModuleAngleSpeed() {
-        return Units.RotationsPerSecond.of(mPeriodicIO.rotationVelocity).in(Units.DegreesPerSecond);
+        return Units.RotationsPerSecond.of(io.rotationVelocity).in(Units.DegreesPerSecond);
     }
 
     /**
@@ -289,10 +285,10 @@ public class SwerveModule extends RedSubsystemBase {
                 Constants.Tuning.AngleMotor.RAMP_RATE,
                 Constants.Tuning.AngleMotor.DYNAMIC_VOLTAGE,
                 null,
-                state -> SignalLogger.writeString("/Sysid/Angle/State", state.toString())
+                recordState -> SignalLogger.writeString("/Sysid/Angle/State", recordState.toString())
             ), 
             new SysIdRoutine.Mechanism(
-                volts -> mPeriodicIO.angleRequest = new VoltageOut(volts), null, this));
+                volts -> io.angleRequest = new VoltageOut(volts), null, this));
     }
 
     /**
@@ -305,10 +301,10 @@ public class SwerveModule extends RedSubsystemBase {
                 Constants.Tuning.DriveMotor.RAMP_RATE,
                 Constants.Tuning.DriveMotor.DYNAMIC_VOLTAGE,
                 null,
-                state -> SignalLogger.writeString("/Sysid/Drive/State", state.toString())
+                recordState -> SignalLogger.writeString("/Sysid/Drive/State", recordState.toString())
             ), 
             new SysIdRoutine.Mechanism(
-                volts -> mPeriodicIO.driveRequest = new VoltageOut(volts), null, this));
+                volts -> io.driveRequest = new VoltageOut(volts), null, this));
     }
 
     /**
@@ -317,16 +313,16 @@ public class SwerveModule extends RedSubsystemBase {
      * @param direction The direction to run in.
      * @return The command.
      */
-	public Command sysIdDynamic(TuningType type, SysIdRoutine.Direction direction) {
+	public Command sysIdDynamic(State type, SysIdRoutine.Direction direction) {
 		return switch (type) {
-            case ANGLE ->
-                Commands.runOnce(() -> mTuningType = type)
+            case ANGLE_TUNING ->
+                Commands.runOnce(() -> state = type)
                     .andThen(angleRoutine().dynamic(direction))
-                    .andThen(Commands.runOnce(() -> mTuningType = TuningType.NONE));
-            case DRIVE ->
-                Commands.runOnce(() -> mTuningType = type)
+                    .andThen(Commands.runOnce(() -> state = State.DEFAULT));
+            case DRIVE_TUNING ->
+                Commands.runOnce(() -> state = type)
                     .andThen(driveRoutine().dynamic(direction))
-                    .andThen(Commands.runOnce(() -> mTuningType = TuningType.NONE));
+                    .andThen(Commands.runOnce(() -> state = State.DEFAULT));
             default -> {
                 DriverStation.reportWarning("Did not provide a valid tuning type", false);
                 yield Commands.none();
@@ -340,20 +336,20 @@ public class SwerveModule extends RedSubsystemBase {
      * @param direction The direction to run in.
      * @return The command.
      */
-	public Command sysIdQuasistatic(TuningType type, SysIdRoutine.Direction direction) {
+	public Command sysIdQuasistatic(State type, SysIdRoutine.Direction direction) {
 		return switch (type) {
-            case ANGLE ->
-                Commands.runOnce(() -> mTuningType = type)
+            case ANGLE_TUNING ->
+                Commands.runOnce(() -> state = type)
                     .andThen(Commands.runOnce(
-                        () -> mPeriodicIO.driveRequest = new NeutralOut()))
+                        () -> io.driveRequest = new NeutralOut()))
                     .andThen(angleRoutine().quasistatic(direction))
-                    .andThen(Commands.runOnce(() -> mTuningType = TuningType.NONE));
-            case DRIVE ->
-                Commands.runOnce(() -> mTuningType = type)
+                    .andThen(Commands.runOnce(() -> state = State.DEFAULT));
+            case DRIVE_TUNING ->
+                Commands.runOnce(() -> state = type)
                     .andThen(Commands.runOnce(
-                        () -> mPeriodicIO.angleRequest = new NeutralOut()))
+                        () -> io.angleRequest = new NeutralOut()))
                     .andThen(driveRoutine().quasistatic(direction))
-                    .andThen(Commands.runOnce(() -> mTuningType = TuningType.NONE));
+                    .andThen(Commands.runOnce(() -> state = State.DEFAULT));
             default -> {
                 DriverStation.reportWarning("Did not provide a valid tuning type", false);
                 yield Commands.none();
@@ -363,10 +359,11 @@ public class SwerveModule extends RedSubsystemBase {
 
     @Override
     public void initSendable(SendableBuilder builder) {
-        builder.addDoubleProperty("/AngleDegrees", this::getModuleAngleDegrees, null);
-        builder.addDoubleProperty("/AngleSpeedDegreesPerSecond", this::getModuleAngleSpeed, null);
-        builder.addDoubleProperty("/DriveSpeedMetersPerSecond", this::getDriveSpeed, null);
-        builder.addDoubleProperty("/TargetAngleDegrees", () -> mPeriodicIO.targetState.angle.getDegrees(), null);
-        builder.addDoubleProperty("/TargetDriveSpeedMetersPerSecond", () -> mPeriodicIO.targetState.speedMetersPerSecond, null);
+        builder.addStringProperty("/State", () -> state.name(), null);
+        builder.addDoubleProperty("/AngleDegrees", () -> getModuleAngleDegrees(), null);
+        builder.addDoubleProperty("/AngleSpeedDegreesPerSecond", () -> getModuleAngleSpeed(), null);
+        builder.addDoubleProperty("/DriveSpeedMetersPerSecond", () -> getDriveSpeed(), null);
+        builder.addDoubleProperty("/TargetAngleDegrees", () -> io.targetState.angle.getDegrees(), null);
+        builder.addDoubleProperty("/TargetDriveSpeedMetersPerSecond", () -> io.targetState.speedMetersPerSecond, null);
     }
 }

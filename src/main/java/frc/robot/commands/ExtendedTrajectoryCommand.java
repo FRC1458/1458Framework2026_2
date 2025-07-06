@@ -1,75 +1,52 @@
 package frc.robot.commands;
 
-import java.util.PriorityQueue;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 
+import edu.wpi.first.math.Pair;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.lib.trajectory.RedTrajectory;
 import frc.robot.subsystems.drive.Drive;
 
 public class ExtendedTrajectoryCommand extends Command {
-    private final Drive mDrive;
-	private final RedTrajectory mTrajectory;
-	private final PriorityQueue<TriggerPoint> mTriggers;
+    private final Drive drive;
+	private final RedTrajectory trajectory;
+	private final List<Pair<Double, Command>> triggers;
 
-	private TriggerPoint currentTriggerPoint;
-
-	public static class TriggerPoint implements Comparable<TriggerPoint> {
-		public double timestamp;
-		public Command command;
-		public TriggerPoint(double timestamp, Command command) {
-			this.timestamp = timestamp;
-			this.command = command;
-		}
-
-		@Override
-		public int compareTo(TriggerPoint o) {
-			return Double.compare(timestamp, o.timestamp);
-		}
-	}
-
-	public ExtendedTrajectoryCommand(Drive drive, RedTrajectory trajectory, TriggerPoint... triggers) {
-		mDrive = drive;
-		mTrajectory = trajectory;
-		mTriggers = new PriorityQueue<>(Arrays.asList(triggers));
-		currentTriggerPoint = mTriggers.poll();
+	@SuppressWarnings("unchecked") 
+	public ExtendedTrajectoryCommand(Drive drive, RedTrajectory trajectory, Pair<Double, Command>... triggers) {
+		this.drive = drive;
+		this.trajectory = trajectory;
 		
 		addRequirements(drive);
-		for (TriggerPoint triggerPoint : mTriggers) {
-			addRequirements(triggerPoint.command.getRequirements());
+		this.triggers = new ArrayList<>(List.of(triggers));
+		for (Pair<Double,Command> trigger : triggers) {
+			new Trigger(() -> trajectory.progress > trigger.getFirst()).onTrue(trigger.getSecond());
 		}
 	}
 
 	@Override
 	public void initialize() {
-		mDrive.trajectoryCommand(mTrajectory).schedule();
+		drive.trajectoryCommand(trajectory).schedule();
 	}
 
 	@Override
-	public void execute() {
-		if (currentTriggerPoint != null) {
-			while (mTrajectory.progress >= currentTriggerPoint.timestamp) {
-				currentTriggerPoint.command.schedule();
-				currentTriggerPoint = mTriggers.poll();
-			}
-		}
-	}
+	public void execute() {}
 
 	@Override
 	public void end(boolean interrupted) {
 		if (interrupted) {
-			for (TriggerPoint trigger : mTriggers) {
-				trigger.command.cancel();
-			}
-			if (currentTriggerPoint != null) {
-				currentTriggerPoint.command.cancel();
+			for (Pair<Double,Command> trigger : triggers) {
+				if (trigger.getSecond().isScheduled() && !trigger.getSecond().isFinished()){
+					trigger.getSecond().cancel();
+				}
 			}
 		}
 	}
 
 	@Override
 	public boolean isFinished() {
-		return mTrajectory.isDone();
+		return trajectory.isDone();
 	}
 }

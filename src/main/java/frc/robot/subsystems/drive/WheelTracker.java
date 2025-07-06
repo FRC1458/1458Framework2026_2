@@ -13,85 +13,75 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class WheelTracker {
-	private final SwerveModule[] mModules;
-	private final Pigeon mPigeon;
+	private final SwerveModule[] modules;
+	private final Pigeon pigeon;
 
-	private WheelProperties[] WheelProperties = new WheelProperties[4];
-	private Pose2d mRobotPose = new Pose2d(10,10,new Rotation2d(0));
-	private Translation2d mRobotVelocity = new Translation2d(0, 0);
-	private BaseStatusSignal[] mAllSignals;
+	private WheelProperties[] wheelProperties = new WheelProperties[4];
+	private Pose2d robotPose = new Pose2d(10,10,new Rotation2d(0));
+	private Translation2d robotVelocity = new Translation2d(0, 0);
+	private BaseStatusSignal[] allSignals;
 
 	private double robotHeading;
 
-	private double mTimestamp;
-	private boolean mIsEnabled = false;
+	private double timestamp;
 
-	private OdometryThread mOdometryThread;
+	private OdometryThread odometryThread;
 
-	private Field2d mRobotField = new Field2d();
+	private Field2d robotField = new Field2d();
 
 	public WheelTracker(SwerveModule[] modules) {
 		if (modules.length != 4) {
 			throw new IllegalArgumentException("Odometry needs 4 modules to run");
 		}
 
-		mModules = modules;
-		mPigeon = Pigeon.getInstance();
+		this.modules = modules;
+		pigeon = Pigeon.getInstance();
 
-		for (int i = 0; i < WheelProperties.length; i++) {
+		for (int i = 0; i < wheelProperties.length; i++) {
 			WheelProperties w = new WheelProperties();
 			Translation2d robotToWheel = new Translation2d(
 					Constants.Drive.MODULE_LOCATIONS[i].getX(),
 					Constants.Drive.MODULE_LOCATIONS[i].getY());
 			w.startingPosition = robotToWheel;
-			WheelProperties[i] = w;
+			wheelProperties[i] = w;
 		}
 
 		resetModulePoses();
 
-		mAllSignals = new BaseStatusSignal[(4 * 4) + 2];
+		allSignals = new BaseStatusSignal[(4 * 4) + 2];
 		for (int i = 0; i < 4; ++i) {
-			var signals = mModules[i].getUsedStatusSignals();
-			mAllSignals[(i * 4) + 0] = signals[0];
-			mAllSignals[(i * 4) + 1] = signals[1];
-			mAllSignals[(i * 4) + 2] = signals[2];
-			mAllSignals[(i * 4) + 3] = signals[3];
+			var signals = modules[i].getUsedStatusSignals();
+			allSignals[(i * 4) + 0] = signals[0];
+			allSignals[(i * 4) + 1] = signals[1];
+			allSignals[(i * 4) + 2] = signals[2];
+			allSignals[(i * 4) + 3] = signals[3];
 		}
-		mAllSignals[mAllSignals.length - 2] = mPigeon.getYawStatusSignal();
-		mAllSignals[mAllSignals.length - 1] = mPigeon.getRateStatusSignal();
+		allSignals[allSignals.length - 2] = pigeon.getYawStatusSignal();
+		allSignals[allSignals.length - 1] = pigeon.getRateStatusSignal();
 
-		for (BaseStatusSignal sig : mAllSignals) {
+		for (BaseStatusSignal sig : allSignals) {
 			sig.setUpdateFrequency(50);
 		}
-		mOdometryThread = new OdometryThread();
-		mOdometryThread.setDaemon(true);
-		mOdometryThread.start();
+		odometryThread = new OdometryThread();
+		odometryThread.setDaemon(true);
+		odometryThread.start();
 
-		mRobotField.setRobotPose(mRobotPose);
+		robotField.setRobotPose(robotPose);
 
-		SmartDashboard.putData("WheelTracker", mRobotField);
+		SmartDashboard.putData("WheelTracker", robotField);
 	}
-
-	public void start() {
-		mIsEnabled = true;
-	}
-
-	public void stop() {
-		mIsEnabled = false;
-	}
-
 	private class OdometryThread extends Thread {
 		@Override
 		public void run() {
 			while (true) {
 				try {
-					BaseStatusSignal.waitForAll(1.0, mAllSignals);
+					BaseStatusSignal.waitForAll(1.0, allSignals);
 
-					for (SwerveModule m : mModules) {
+					for (SwerveModule m : modules) {
 						m.refreshSignals(); // No downside to refreshing io reads from multiple threads
 					}
 
-					robotHeading = mPigeon.getYaw().getRadians();
+					robotHeading = pigeon.getYaw().getRadians();
 					updateRobotPose(Timer.getFPGATimestamp());
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -111,13 +101,13 @@ public class WheelTracker {
 
 		double avg_delta = 0.0;
 		double[] deltas = new double[4];
-		for (int i = 0; i < mModules.length; i++) {
-			SwerveModule m = mModules[i];
-			WheelProperties w = WheelProperties[i];
+		for (int i = 0; i < modules.length; i++) {
+			SwerveModule m = modules[i];
+			WheelProperties w = wheelProperties[i];
 			updateWheelOdometry(m, w);
 			double delta = w.estimatedRobotPose
 					.getTranslation()
-					.plus(mRobotPose.getTranslation().unaryMinus())
+					.plus(robotPose.getTranslation().unaryMinus())
 					.getNorm();
 			deltas[i] = delta;
 			avg_delta += delta;
@@ -128,7 +118,7 @@ public class WheelTracker {
 		double min_dev = Double.MAX_VALUE;
 		List<WheelProperties> accurateModules = new ArrayList<>();
 		for (int i = 0; i < deltas.length; i++) {
-			WheelProperties w = WheelProperties[i];
+			WheelProperties w = wheelProperties[i];
 			double dev = Math.abs(deltas[i] - avg_delta);
 			if (dev < min_dev) {
 				min_dev = dev;
@@ -140,12 +130,10 @@ public class WheelTracker {
 		}
 
 		if (accurateModules.isEmpty()) {
-			accurateModules.add(WheelProperties[min__dev_idx]);
+			accurateModules.add(wheelProperties[min__dev_idx]);
 		}
 
 		int n = accurateModules.size();
-
-//		SmartDashboard.putNumber("Modules Used For Odometry", n);
 
 		for (WheelProperties w : accurateModules) {
 			x += w.estimatedRobotPose.getTranslation().getX();
@@ -160,7 +148,7 @@ public class WheelTracker {
 					new Translation2d(-last_velocity_sample.getTranslation().getX(),
 							-last_velocity_sample.getTranslation().getY()),
 					last_velocity_sample.getRotation().unaryMinus())).getTranslation());
-			mRobotVelocity = new Translation2d(
+			robotVelocity = new Translation2d(
 				translation.getX() * (1.0 / sample_window),
 				translation.getY() * (1.0  / sample_window)
 			);
@@ -168,11 +156,11 @@ public class WheelTracker {
 			last_velocity_sample = new_pose;
 		}
 
-		mRobotPose = new_pose;
+		robotPose = new_pose;
 
-		mRobotField.setRobotPose(new_pose);
+		robotField.setRobotPose(new_pose);
 
-		resetModulePoses(mRobotPose);
+		resetModulePoses(robotPose);
 	}
 
 
@@ -180,8 +168,9 @@ public class WheelTracker {
 		double currentEncDistance = module.getDriveDistance();
 		double deltaEncDistance = currentEncDistance - props.previousEncDistance;
 		Rotation2d wheelAngle = module.getModuleAngle().rotateBy(Rotation2d.fromRadians(-robotHeading));
-		Translation2d deltaPosition = new Translation2d(wheelAngle.getCos() * deltaEncDistance,
-				-wheelAngle.getSin() * deltaEncDistance); 
+		Translation2d deltaPosition = new Translation2d(
+			wheelAngle.getCos() * deltaEncDistance,
+			-wheelAngle.getSin() * deltaEncDistance); 
 		double xCorrectionFactor = 1.0;
 		double yCorrectionFactor = 1.0;
 
@@ -208,8 +197,8 @@ public class WheelTracker {
 	}
 
 	public void resetModulePoses(Pose2d mRobotPose) {
-		for (int i = 0; i < mModules.length; i++) {
-			WheelProperties props = WheelProperties[i];
+		for (int i = 0; i < modules.length; i++) {
+			WheelProperties props = wheelProperties[i];
 			Translation2d modulePosition = new Pose2d(mRobotPose.getTranslation().plus(props.startingPosition),mRobotPose.getRotation())
 					.getTranslation();
 			props.position = modulePosition;
@@ -217,16 +206,16 @@ public class WheelTracker {
 	}
 
 	private void resetModulePoses() {
-		for (int i = 0; i < mModules.length; i++) {
-			WheelProperties props = WheelProperties[i];
+		for (int i = 0; i < modules.length; i++) {
+			WheelProperties props = wheelProperties[i];
 			props.position = props.startingPosition;
 		}
 	}
 
 
 	public synchronized void resetPose(Pose2d pose) {
-		mRobotPose = new Pose2d(pose.getTranslation(), pose.getRotation());
-		resetModulePoses(mRobotPose);
+		robotPose = new Pose2d(pose.getTranslation(), pose.getRotation());
+		resetModulePoses(robotPose);
 	}
 
 	public class WheelProperties {
@@ -237,54 +226,54 @@ public class WheelTracker {
 	}
 
 	public synchronized Pose2d getRobotPose() {
-		return mRobotPose;
+		return robotPose;
 	}
 
 	public synchronized Translation2d getMeasuredVelocity() { 
-		return mRobotVelocity;
+		return robotVelocity;
 	}
 
 	public double getTimestamp() {
-		return mTimestamp;
+		return timestamp;
 	}
 
 	public double wheel0_x() {
-		return WheelProperties[0].position.getX();
+		return wheelProperties[0].position.getX();
 	}
 
 	public double wheel0_y() {
-		return WheelProperties[0].position.getY();
+		return wheelProperties[0].position.getY();
 	}
 
 	public double wheel1_x() {
-		return WheelProperties[1].position.getX();
+		return wheelProperties[1].position.getX();
 	}
 
 	public double wheel1_y() {
-		return WheelProperties[1].position.getY();
+		return wheelProperties[1].position.getY();
 	}
 
 	public double wheel2_x() {
-		return WheelProperties[2].position.getX();
+		return wheelProperties[2].position.getX();
 	}
 
 	public double wheel2_y() {
-		return WheelProperties[2].position.getY();
+		return wheelProperties[2].position.getY();
 	}
 
 	public double wheel3_x() {
-		return WheelProperties[3].position.getX();
+		return wheelProperties[3].position.getX();
 	}
 
 	public double wheel3_y() {
-		return WheelProperties[3].position.getY();
+		return wheelProperties[3].position.getY();
 	}
 
 	public double robot_x() {
-		return mRobotPose.getTranslation().getX();
+		return robotPose.getTranslation().getX();
 	}
 
 	public double robot_y() {
-		return mRobotPose.getTranslation().getY();
+		return robotPose.getTranslation().getY();
 	}
 }

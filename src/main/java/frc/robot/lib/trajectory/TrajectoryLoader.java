@@ -1,20 +1,12 @@
 package frc.robot.lib.trajectory;
 
-import java.io.IOException;
 import java.util.Optional;
-
-import org.json.simple.parser.ParseException;
 
 import com.pathplanner.lib.path.PathPlannerPath;
 import com.pathplanner.lib.trajectory.PathPlannerTrajectory;
-import com.pathplanner.lib.util.FileVersionException;
-
 import choreo.Choreo;
-import choreo.auto.AutoTrajectory;
 import choreo.trajectory.SwerveSample;
 import choreo.trajectory.Trajectory;
-import choreo.trajectory.TrajectorySample;
-import edu.wpi.first.util.FileLogger;
 import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.Constants;
 
