@@ -29,9 +29,9 @@ import frc.robot.lib.util.Conversions;
 
 public class SwerveModule extends SubsystemBase {
     public final String name;
-	private BaseStatusSignal[] mSignals = new BaseStatusSignal[4];
+	private final BaseStatusSignal[] signals = new BaseStatusSignal[4];
 
-    private SwerveModuleIO io = new SwerveModuleIO();
+    private final SwerveModuleIO io = new SwerveModuleIO();
     public static class SwerveModuleIO {
 		public double rotationPosition = 0.0;
 		public double rotationVelocity = 0.0;
@@ -52,14 +52,14 @@ public class SwerveModule extends SubsystemBase {
         DRIVE_TUNING
     }
 
-    private TalonFX angleMotor;
-    private TalonFX driveMotor;
-    private CANcoder cancoder;
+    private final TalonFX angleMotor;
+    private final TalonFX driveMotor;
+    private final CANcoder cancoder;
     
-    private DCMotorSim angleMotorSim;
-    private DCMotorSim driveMotorSim;
+    private final DCMotorSim angleMotorSim;
+    private final DCMotorSim driveMotorSim;
 
-    public SwerveModule(Constants.Drive.Modules constants, CANcoder cancoder) {
+    public SwerveModule(Constants.Drive.ModuleConstants constants, CANcoder cancoder) {
         name = constants.name();
         setName("Module " + name);
 
@@ -77,10 +77,10 @@ public class SwerveModule extends SubsystemBase {
 
         this.cancoder = cancoder;
 
-        mSignals[0] = driveMotor.getRotorPosition();
-		mSignals[1] = driveMotor.getRotorVelocity();
-		mSignals[2] = angleMotor.getRotorPosition();
-		mSignals[3] = angleMotor.getRotorVelocity();
+        signals[0] = driveMotor.getRotorPosition();
+		signals[1] = driveMotor.getRotorVelocity();
+		signals[2] = angleMotor.getRotorPosition();
+		signals[3] = angleMotor.getRotorVelocity();
         SmartDashboard.putData(this);
     }
 
@@ -272,7 +272,7 @@ public class SwerveModule extends SubsystemBase {
      * @return The status signals from this swerve module.
      */
     public BaseStatusSignal[] getUsedStatusSignals() {
-		return mSignals;
+		return signals;
 	}
     
     /**

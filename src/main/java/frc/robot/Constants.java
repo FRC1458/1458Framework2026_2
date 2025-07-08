@@ -25,11 +25,12 @@ import frc.robot.lib.swerve.COTSTalonFXSwerveConstants;
  */
 public final class Constants {
 	public static final double DT = 0.02;
-	public static final double K_EPSILON = 1e-6;
+	public static final double DEADBAND = 1e-6;
 	public static final double LONG_CANT_TIMEOUT_MS = 0;
 
 	public static final class Controllers {
 		public static final int DRIVER_CONTROLLER_PORT = 0;
+		public static final double DRIVER_DEADBAND = 0.07;
 	}
 
 	public static final class Odometry {
@@ -86,7 +87,7 @@ public final class Constants {
 
 		public static final boolean INVERT_GYRO = false;
 
-		public static enum Modules {
+		public static enum ModuleConstants {
 			/** Module 0 */
 			FRONT_LEFT ( 
 				8, 10, 7, Rotation2d.fromRotations(0.142334), true, false),
@@ -114,7 +115,7 @@ public final class Constants {
 			 * @param canCoderID
 			 * @param angleOffset
 			 */
-			private Modules(int driveMotorID, int angleMotorID, int canCoderID, Rotation2d angleOffset, boolean driveInvert, boolean angleInvert) {
+			private ModuleConstants(int driveMotorID, int angleMotorID, int canCoderID, Rotation2d angleOffset, boolean driveInvert, boolean angleInvert) {
 				this.driveMotorID = driveMotorID;
 				this.angleMotorID = angleMotorID;
 				this.cancoderID = canCoderID;
@@ -128,6 +129,13 @@ public final class Constants {
 	public static final class Auto {
 		public static final PIDFConstants TRANSLATION_CONSTANTS = 
 			new PIDFConstants(5.5,0.0,0.0,1.0);
+
+		public static final ProfiledPIDFConstants TRANSLATION_CONSTANTS2 = 
+			new ProfiledPIDFConstants(5.5,0.0, 0.0, 1.0, 
+				new TrapezoidProfile.Constraints(
+					Drive.MAX_SPEED, 
+					Drive.MAX_ACCEL));
+
 		public static final ProfiledPIDFConstants ROTATION_CONSTANTS = 
 			new ProfiledPIDFConstants(4.0,0.0, 0.0, 1.0, 
 				new TrapezoidProfile.Constraints(
@@ -212,7 +220,7 @@ public final class Constants {
 		}
 	}
 
-	public static enum Ports { // TODO: this must be tuned to the specific robot
+	public static enum Port { // TODO: this must be tuned to the specific robot
 		FL_CANCODER (7, "CV"),
 		FR_CANCODER (6, "CV"),
 		BL_CANCODER (14, "CV"),
@@ -222,7 +230,7 @@ public final class Constants {
 
 		public final int id;
 		public final String bus;
-		private Ports(int id, String bus) {
+		private Port(int id, String bus) {
 			this.id = id;
 			this.bus = bus;
 		}

@@ -78,7 +78,7 @@ public class Robot extends TimedRobot {
 	@Override
 	public void autonomousInit() {
 		RobotState.setAlliance(DriverStation.getAlliance());
-		autoCommand = Autos.driveAuto();
+		autoCommand = AutoRoutines.driveAuto();
 
 		if (autoCommand != null) {
 			autoCommand.schedule();
@@ -88,13 +88,13 @@ public class Robot extends TimedRobot {
 	/** This function is called periodically during autonomous. */
 	@Override
 	public void autonomousPeriodic() {
-
+		doNothing();
 	}
 
 	/** This function is called when autonomous mode ends. */
 	@Override
 	public void autonomousExit() {
-
+		doNothing();
 	}
 
 	@Override
@@ -112,7 +112,7 @@ public class Robot extends TimedRobot {
 	/** This function is called periodically during operator control. */
 	@Override
 	public void teleopPeriodic() {
-
+		doNothing();
 	}
 
 	@Override
@@ -124,7 +124,7 @@ public class Robot extends TimedRobot {
 	/** This function is called periodically during test mode. */
 	@Override
 	public void testPeriodic() {
-
+		doNothing();
 	}
 
 	/** This function is called once when the robot is first started up. */
@@ -136,6 +136,8 @@ public class Robot extends TimedRobot {
 	/** This function is called periodically whilst in simulation. */
 	@Override
 	public void simulationPeriodic() {
-
+		doNothing();
 	}
+
+	public static void doNothing() {}
 }

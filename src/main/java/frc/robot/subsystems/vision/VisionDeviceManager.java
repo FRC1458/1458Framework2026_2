@@ -58,14 +58,14 @@ public class VisionDeviceManager extends SubsystemBase {
 		return headingAvg;
 	}
 
-	public synchronized boolean fullyConnected() {
+	public synchronized boolean isFullyConnected() {
 		return leftCamera.isConnected()
 			&& rightCamera.isConnected()
 			&& frontCamera.isConnected()
 			&& backCamera.isConnected();
 	}
 
-	public synchronized boolean inRange () {
+	public synchronized boolean inRange() {
 		return frontCamera.inSnapRange() && frontCamera.hasTarget();
 	}
 

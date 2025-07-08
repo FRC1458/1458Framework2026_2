@@ -20,7 +20,7 @@ public class Pigeon extends SubsystemBase {
 	private static Pigeon pigeonInstance;
 	public static Pigeon getInstance() {
 		if (pigeonInstance == null) {
-			pigeonInstance = new Pigeon(Constants.Ports.PIGEON);
+			pigeonInstance = new Pigeon(Constants.Port.PIGEON);
 		}
 		return pigeonInstance;
 	}
@@ -34,7 +34,7 @@ public class Pigeon extends SubsystemBase {
 
 	private double simAngularVelocity = 0.0;
 
-	private Pigeon(Constants.Ports constants) {
+	private Pigeon(Constants.Port constants) {
 		gyro = new Pigeon2(constants.id, constants.bus);
 		gyro.getConfigurator().apply(new Pigeon2Configuration());
 	}

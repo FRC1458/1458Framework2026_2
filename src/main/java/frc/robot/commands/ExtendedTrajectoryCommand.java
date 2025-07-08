@@ -14,7 +14,7 @@ public class ExtendedTrajectoryCommand extends Command {
 	private final RedTrajectory trajectory;
 	private final List<Pair<Double, Command>> triggers;
 
-	@SuppressWarnings("unchecked") 
+	@SafeVarargs
 	public ExtendedTrajectoryCommand(Drive drive, RedTrajectory trajectory, Pair<Double, Command>... triggers) {
 		this.drive = drive;
 		this.trajectory = trajectory;

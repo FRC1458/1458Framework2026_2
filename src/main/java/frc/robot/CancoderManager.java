@@ -56,7 +56,7 @@ public class CancoderManager {
 		}
 	}
 
-	private CANcoder build(Constants.Ports canDeviceId) {
+	private CANcoder build(Constants.Port canDeviceId) {
 		CANcoder thisCancoder = new CANcoder(canDeviceId.id, canDeviceId.bus);
 		CANcoderConfigurator configurator = thisCancoder.getConfigurator();
 		CANcoderConfiguration canCoderConfig = new CANcoderConfiguration();
@@ -85,16 +85,16 @@ public class CancoderManager {
 	}
 
 	public CancoderManager() {
-		fl = build(Constants.Ports.FL_CANCODER);
+		fl = build(Constants.Port.FL_CANCODER);
 		flObs = new CanTimeObserver(fl);
 
-		fr = build(Constants.Ports.FR_CANCODER);
+		fr = build(Constants.Port.FR_CANCODER);
 		frObs = new CanTimeObserver(fr);
 
-		bl = build(Constants.Ports.BL_CANCODER);
+		bl = build(Constants.Port.BL_CANCODER);
 		blObs = new CanTimeObserver(bl);
 
-		br = build(Constants.Ports.BR_CANCODER);
+		br = build(Constants.Port.BR_CANCODER);
 		brObs = new CanTimeObserver(br);
 	}
 

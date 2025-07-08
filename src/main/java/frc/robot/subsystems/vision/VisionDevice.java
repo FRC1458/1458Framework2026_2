@@ -29,6 +29,8 @@ import java.util.Arrays;
 import java.util.List;
 import edu.wpi.first.math.Vector;
 
+
+@SuppressWarnings("unused") // TODO: Remove ts
 public class VisionDevice {
 	private final VisionDeviceConstants mConstants;
 	private PeriodicIO mPeriodicIO = new PeriodicIO();
@@ -185,7 +187,7 @@ public class VisionDevice {
 		boolean is_connected;
 	}
 
-	private static class VisionFrame {
+	private static class VisionFrame implements Comparable<VisionFrame> {
 		double timestamp;
 		double[] frame_data;
 		double[] stdDevs;
@@ -193,6 +195,11 @@ public class VisionDevice {
 		// For comparator
 		public double getTimestamp() {
 			return timestamp;
+		}
+
+		@Override
+		public int compareTo(VisionFrame o) {
+			return Double.compare(timestamp, o.timestamp);
 		}
 	}
 }

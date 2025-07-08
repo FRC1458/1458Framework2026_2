@@ -1,7 +1,5 @@
 package frc.robot.subsystems.drive;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.BooleanSupplier;
 import com.ctre.phoenix6.SignalLogger;
 import com.pathplanner.lib.path.GoalEndState;
@@ -57,7 +55,7 @@ public class Drive extends SubsystemBase {
         PREPARING
     }
 
-    private DriveIO io;
+    private final DriveIO io;
     public static class DriveIO {
         public ChassisSpeeds targetSpeeds = new ChassisSpeeds();
         public SwerveModuleState[] targetModuleStates = new SwerveModuleState[] {
@@ -68,16 +66,16 @@ public class Drive extends SubsystemBase {
 
     private final SwerveModule[] swerveModules;
 
-    private WheelTracker wheelTracker;
-    private Pigeon pigeon;
-    private CancoderManager cancoders;
-    private DriveController driveController;
-    private CustomADStar pathFinder;
+    private final WheelTracker wheelTracker;
+    private final Pigeon pigeon;
+    private final CancoderManager cancoders;
+    private final DriveController driveController;
+    private final CustomADStar pathFinder;
 
-    private SwerveDriveKinematics swerveKinematics;
+    private final SwerveDriveKinematics swerveKinematics;
 
-    private SlewRateLimiter accelLimiter;
-    private SlewRateLimiter rotationAccelLimiter;
+    private final SlewRateLimiter accelLimiter;
+    private final SlewRateLimiter rotationAccelLimiter;
     
     private final StructArrayPublisher<SwerveModuleState> desiredStatesPublisher = NetworkTableInstance.getDefault()
         .getStructArrayTopic("SmartDashboard/Drive/States_Desired", SwerveModuleState.struct).publish();
@@ -93,13 +91,13 @@ public class Drive extends SubsystemBase {
         cancoders = CancoderManager.getInstance();
         swerveModules = new SwerveModule[] {
             new SwerveModule(
-                Constants.Drive.Modules.FRONT_LEFT, cancoders.getFrontLeft()), 
+                Constants.Drive.ModuleConstants.FRONT_LEFT, cancoders.getFrontLeft()), 
             new SwerveModule(
-                Constants.Drive.Modules.FRONT_RIGHT, cancoders.getFrontRight()), 
+                Constants.Drive.ModuleConstants.FRONT_RIGHT, cancoders.getFrontRight()), 
             new SwerveModule(
-                Constants.Drive.Modules.BACK_LEFT, cancoders.getBackLeft()), 
+                Constants.Drive.ModuleConstants.BACK_LEFT, cancoders.getBackLeft()), 
             new SwerveModule(   
-                Constants.Drive.Modules.BACK_RIGHT, cancoders.getBackRight())
+                Constants.Drive.ModuleConstants.BACK_RIGHT, cancoders.getBackRight())
             // make sure to declare in the correct order
         };
         swerveKinematics = new SwerveDriveKinematics(Constants.Drive.MODULE_LOCATIONS);
@@ -107,8 +105,10 @@ public class Drive extends SubsystemBase {
         rotationAccelLimiter = new SlewRateLimiter(Constants.Drive.MAX_ROTATION_ACCEL);
         wheelTracker = new WheelTracker(swerveModules);
         pigeon = Pigeon.getInstance();
-        driveController = new PIDHolonomicDriveController(
-            Constants.Auto.TRANSLATION_CONSTANTS, Constants.Auto.ROTATION_CONSTANTS, Constants.Auto.ACCELERATION_CONSTANT);
+        driveController = new PIDHolonomicDriveController2(
+            Constants.Auto.TRANSLATION_CONSTANTS2, 
+            Constants.Auto.ROTATION_CONSTANTS, 
+            Constants.Auto.ACCELERATION_CONSTANT);
         pathFinder = new CustomADStar();
         SmartDashboard.putData(this);
     }
@@ -130,9 +130,7 @@ public class Drive extends SubsystemBase {
                 driveController.setInput(
                     new Pair<Pose2d, Twist2d>(
                         RobotState.getLatestFieldToVehicle(), 
-                        RobotState.getSmoothedVelocity()
-                    )
-                );
+                        RobotState.getSmoothedVelocity()));
                 setTargetSpeeds(driveController.getOutput());
                 setModuleTargetStates(io.targetSpeeds);
                 break;
@@ -179,12 +177,17 @@ public class Drive extends SubsystemBase {
      */
     public Command teleopCommand() { 
         return Commands.runOnce(this::setTeleop, this)
-            .andThen(Commands.run(() -> {
-                        this.setSpeedsFromController(
-                            Robot.getController().getLeftX(),
-                            Robot.getController().getLeftY(),
-                            Robot.getController().getRightX());
-                    }, this));
+            .andThen(Commands.run(
+                () -> setSpeedsFromController(
+                    MathUtil.applyDeadband(
+                        Robot.getController().getLeftX(), 
+                        Constants.Controllers.DRIVER_DEADBAND),
+                    MathUtil.applyDeadband(
+                        Robot.getController().getLeftY(), 
+                        Constants.Controllers.DRIVER_DEADBAND),
+                    MathUtil.applyDeadband(
+                        Robot.getController().getRightX(), 
+                        Constants.Controllers.DRIVER_DEADBAND)), this));
     }
 
     /**
@@ -193,35 +196,13 @@ public class Drive extends SubsystemBase {
      */
     public Command trajectoryCommand(RedTrajectory trajectory) {
         if (trajectory == null) {
-            System.out.println("the trajectory was.");
+            DriverStation.reportWarning("Trajectory was null!", false);
             return Commands.none();
         }
 
         return Commands.runOnce(() -> setTrajectory(trajectory), this)
-                       .andThen(Commands.waitUntil(driveController::isDone))
-                       .andThen(Commands.runOnce(this::setTeleop));
-    }
-
-    /**
-     * A command to drive to a pose.
-     * @param pose The pose to drive to.
-     */
-    public Command driveToPoseCommand1(Pose2d pose) {
-        if (pose == null) {
-            System.out.println("the pose was.");
-            return Commands.none();
-        }
-        pathFinder.setGoalPosition(pose.getTranslation());
-        try {
-            RedTrajectory traj = new RedTrajectory(pathFinder.getCurrentPath(
-                Constants.Pathplanner.GLOBAL_CONSTRAINTS, 
-                new GoalEndState(0, pose.getRotation()))
-                    .getIdealTrajectory(Constants.Pathplanner.config).get(), false);
-            return trajectoryCommand(traj);
-        } catch (Exception e) {
-            DriverStation.reportWarning("Trajectory failed to generate while generating command", false);
-            return Commands.none();
-        }
+            .andThen(Commands.waitUntil(driveController::isDone))
+            .andThen(Commands.runOnce(this::setTeleop));
     }
 
     /**
@@ -230,10 +211,10 @@ public class Drive extends SubsystemBase {
      */
     public Command driveToPoseCommand(Pose2d pose) {
         if (pose == null) {
-            System.out.println("the pose was.");
+            DriverStation.reportWarning("Pose was null", false);
             return Commands.none();
         }
-        System.out.println("it be doing the thing");
+
         return Commands.runOnce(() -> 
             pathFinder.setGoalPosition(pose.getTranslation())).andThen(
                 Commands.race(
@@ -250,8 +231,8 @@ public class Drive extends SubsystemBase {
                             .get(), 
                             false));
                     } catch (Exception e) {
-                        DriverStation.reportError("Trajectory failed to generate! " + e.getMessage(), true);
-                    }}));
+                        DriverStation.reportError("Trajectory failed to generate! "
+                            + e.getMessage(), true);}}));
     }
 
     /**
@@ -266,7 +247,7 @@ public class Drive extends SubsystemBase {
      */
     public Command prepareCommand(ChassisSpeeds speeds, double duration) {
         return Commands.runOnce(() -> setPreparing(speeds)).andThen(Commands.waitSeconds(duration))
-                       .andThen(Commands.waitUntil(interruptor()));
+            .andThen(Commands.waitUntil(interruptor()));
     }    
     
     /**
@@ -296,8 +277,7 @@ public class Drive extends SubsystemBase {
                 Constants.Tuning.DriveTranslation.RAMP_RATE,
                 Constants.Tuning.DriveTranslation.DYNAMIC_VOLTAGE,
                 null,
-                state -> SignalLogger.writeString("/Sysid/DriveTranslation/State", state.toString())
-            ), 
+                state -> SignalLogger.writeString("/Sysid/DriveTranslation/State", state.toString())), 
             new SysIdRoutine.Mechanism(
                 volts -> io.targetSpeeds = new ChassisSpeeds(
                     volts.in(Units.Volts), 0, 0), null, this));
@@ -356,8 +336,7 @@ public class Drive extends SubsystemBase {
             new SwerveModuleState(0.0, Rotation2d.fromDegrees(-45)),
             new SwerveModuleState(0.0, Rotation2d.fromDegrees(45)),
             new SwerveModuleState(0.0, Rotation2d.fromDegrees(45)),
-            new SwerveModuleState(0.0, Rotation2d.fromDegrees(-45))
-        };
+            new SwerveModuleState(0.0, Rotation2d.fromDegrees(-45))};
     }
 
     private void setPreparing(ChassisSpeeds speeds) {
@@ -374,8 +353,7 @@ public class Drive extends SubsystemBase {
         RobotState.addOdometryUpdate(
             Timer.getFPGATimestamp(), 
             wheelTracker.getRobotPose(),
-            io.measuredVelocity, io.predictedVelocity
-		);
+            io.measuredVelocity, io.predictedVelocity);
 	}    
 
     /**
@@ -393,7 +371,6 @@ public class Drive extends SubsystemBase {
             Util.logMap(Util.expMap(
                 predictedTwistVelocity).rotateBy(
                     pigeon.getYaw()));
-        
 		io.measuredVelocity = new Twist2d(
             translation_vel.getX(),
             translation_vel.getY(),
@@ -422,9 +399,7 @@ public class Drive extends SubsystemBase {
                 x * Constants.Drive.MAX_SPEED,
                 y * Constants.Drive.MAX_SPEED, 
                 z * Constants.Drive.MAX_ROTATION_SPEED,
-                RobotState.getLatestFieldToVehicle().getRotation()
-            )
-        );
+                RobotState.getLatestFieldToVehicle().getRotation()));
     }
 
     /**
@@ -435,8 +410,6 @@ public class Drive extends SubsystemBase {
         io.targetSpeeds = limitSpeeds(speeds);
     }
 
-    
-
     /**
     * Sets the target states of the individual modules.
     * @param chassisSpeeds The filtered chassis speeds, robot-relative.
@@ -445,8 +418,7 @@ public class Drive extends SubsystemBase {
         SwerveModuleState[] rawTargetModuleStates = swerveKinematics.toSwerveModuleStates(io.targetSpeeds);
         SwerveDriveKinematics.desaturateWheelSpeeds(
             rawTargetModuleStates,
-            Constants.Drive.MAX_SPEED
-        );
+            Constants.Drive.MAX_SPEED);
         io.targetModuleStates = rawTargetModuleStates;
     }
 
@@ -454,8 +426,7 @@ public class Drive extends SubsystemBase {
         SwerveModuleState[] rawTargetModuleStates = swerveKinematics.toSwerveModuleStates(io.targetSpeeds);
         SwerveDriveKinematics.desaturateWheelSpeeds(
             rawTargetModuleStates,
-            Constants.Drive.MAX_SPEED
-        );
+            Constants.Drive.MAX_SPEED);
         for (SwerveModuleState swerveModuleState : rawTargetModuleStates) {
             swerveModuleState.speedMetersPerSecond = 0.0;
         }
@@ -476,14 +447,13 @@ public class Drive extends SubsystemBase {
         double limitedSpeed = accelLimiter.calculate(rawSpeed);
         
         double vx = MathUtil.applyDeadband(
-            rawVx / rawSpeed * limitedSpeed, Constants.K_EPSILON);
+            rawVx / rawSpeed * limitedSpeed, Constants.DEADBAND);
         double vy = MathUtil.applyDeadband(
-            rawVy / rawSpeed * limitedSpeed, Constants.K_EPSILON);
+            rawVy / rawSpeed * limitedSpeed, Constants.DEADBAND);
 
         double omega = MathUtil.clamp(
             rotationAccelLimiter.calculate(rawOmega),
-            -Constants.Drive.MAX_ROTATION_SPEED, Constants.Drive.MAX_ROTATION_SPEED
-        );
+            -Constants.Drive.MAX_ROTATION_SPEED, Constants.Drive.MAX_ROTATION_SPEED);
 
         return new ChassisSpeeds(vx, vy, omega);
     }
@@ -493,11 +463,11 @@ public class Drive extends SubsystemBase {
      * @return An array of the {@code SwerveModuleState}s of each swerve module.
      */
     public SwerveModuleState[] getModuleStates() {
-        List<SwerveModuleState> states = new ArrayList<>();
-		for (SwerveModule swerveModule : swerveModules) {
-            states.add(swerveModule.getState());
+        SwerveModuleState[] states = new SwerveModuleState[swerveModules.length];
+		for (int i = 0; i < swerveModules.length; i++) {
+            states[i] = swerveModules[i].getState();
         }
-        return (SwerveModuleState[]) states.toArray();
+        return states;
 	}
 
     @Override

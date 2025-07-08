@@ -7,8 +7,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,9 +23,9 @@ public class WheelTracker {
 
 	private double timestamp;
 
-	private OdometryThread odometryThread;
+	private final OdometryThread odometryThread;
 
-	private Field2d robotField = new Field2d();
+	// private Field2d robotField = new Field2d();
 
 	public WheelTracker(SwerveModule[] modules) {
 		if (modules.length != 4) {
@@ -66,9 +64,9 @@ public class WheelTracker {
 		odometryThread.setDaemon(true);
 		odometryThread.start();
 
-		robotField.setRobotPose(robotPose);
+		// robotField.setRobotPose(robotPose);
 
-		SmartDashboard.putData("WheelTracker", robotField);
+		// SmartDashboard.putData("WheelTracker", robotField);
 	}
 	private class OdometryThread extends Thread {
 		@Override
@@ -85,7 +83,7 @@ public class WheelTracker {
 					updateRobotPose(Timer.getFPGATimestamp());
 				} catch (Exception e) {
 					e.printStackTrace();
-					System.out.println("Failed, see above error");
+					System.out.println("Wheeltracker failed, see above error");
 				}
 			}
 		}
@@ -156,9 +154,9 @@ public class WheelTracker {
 			last_velocity_sample = new_pose;
 		}
 
-		robotPose = new_pose;
+		// robotPose = new_pose;
 
-		robotField.setRobotPose(new_pose);
+		// robotField.setRobotPose(new_pose);
 
 		resetModulePoses(robotPose);
 	}
@@ -176,6 +174,7 @@ public class WheelTracker {
 
 		if (Math.signum(deltaPosition.getX()) == 1.0) {
 			xCorrectionFactor = (8.6 / 9.173);
+			// TODO: Put this in constants
 
 		} else if (Math.signum(deltaPosition.getX()) == -1.0) {
 			xCorrectionFactor = (8.27 / 9.173);
@@ -211,7 +210,6 @@ public class WheelTracker {
 			props.position = props.startingPosition;
 		}
 	}
-
 
 	public synchronized void resetPose(Pose2d pose) {
 		robotPose = new Pose2d(pose.getTranslation(), pose.getRotation());

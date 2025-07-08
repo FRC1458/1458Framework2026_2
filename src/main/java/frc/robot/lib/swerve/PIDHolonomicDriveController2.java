@@ -14,9 +14,9 @@ import frc.robot.lib.control.PIDVController;
 import frc.robot.lib.control.ProfiledPIDVController;
 import frc.robot.lib.trajectory.RedTrajectory;
 
-public class PIDHolonomicDriveController implements DriveController {
-    private final PIDVController xController;
-    private final PIDVController yController;
+public class PIDHolonomicDriveController2 implements DriveController {
+    private final ProfiledPIDVController xController;
+    private final ProfiledPIDVController yController;
     private final ProfiledPIDVController thetaController;
     private double accelConstant;
 
@@ -37,9 +37,9 @@ public class PIDHolonomicDriveController implements DriveController {
      * @param rotationConstants The {@link ProfiledPIDFConstants} for the rotation of the robot.
      * @param accelConstant The acceleration feedforwards (useful for traversing sharp turns on a trajectory).
      */
-    public PIDHolonomicDriveController(PIDFConstants translationConstants, ProfiledPIDFConstants rotationConstants, double accelConstant) {
-        xController = new PIDVController(translationConstants);
-        yController = new PIDVController(translationConstants);
+    public PIDHolonomicDriveController2(ProfiledPIDFConstants translationConstants, ProfiledPIDFConstants rotationConstants, double accelConstant) {
+        xController = new ProfiledPIDVController(translationConstants);
+        yController = new ProfiledPIDVController(translationConstants);
 
         thetaController = new ProfiledPIDVController(rotationConstants);
                 
@@ -114,10 +114,10 @@ public class PIDHolonomicDriveController implements DriveController {
 		SmartDashboard.putData("debug", field);
 
         return ChassisSpeeds.fromFieldRelativeSpeeds(
-            vx + xAccelFF * accelConstant,
-            vy + yAccelFF * accelConstant,
-            rotation,
-            currentPose.getRotation());
+                vx + xAccelFF * accelConstant,
+                vy + yAccelFF * accelConstant,
+                rotation,
+                currentPose.getRotation());
     }
 
     @Override
