@@ -3,9 +3,9 @@ package frc.robot.subsystems;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 
-import edu.wpi.first.math.Pair;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructArrayPublisher;
+import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.util.struct.Struct;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -20,20 +20,58 @@ public class TelemetryManager extends SubsystemBase {
         return telemetryManagerInstance;
     }
 
-    private final ArrayList<Pair<StructArrayPublisher<?>, Supplier<?>>> publishers;
+    private final ArrayList<StructArrayPublisherEntry<?>> structArrayPublishers = new ArrayList<>();
+
+    public static record StructArrayPublisherEntry<T> (
+        StructArrayPublisher<T> publisher, Supplier<T[]> supplier
+    ) {
+        public void publish() {
+            publisher.set(supplier.get());
+        }
+    }
+
+
+    private final ArrayList<StructPublisherEntry<?>> structPublishers;
+
+    public static record StructPublisherEntry<T> (
+        StructPublisher<T> publisher, Supplier<T> supplier
+    ) {
+        public void publish() {
+            publisher.set(supplier.get());
+        }
+    }
+
     private final ArrayList<Sendable> sendables;
 
     private TelemetryManager() {
-        publishers = new ArrayList<>();
+        structPublishers = new ArrayList<>();
         sendables = new ArrayList<>();
     }
+
+    public void periodic() {
+        for (StructArrayPublisherEntry<?> entry : structArrayPublishers) {
+            entry.publish();
+        }
+
+        for (StructPublisherEntry<?> entry : structPublishers) {
+            entry.publish();
+        }
+    }
     
-    public <T> void addPublisher(String name, Struct<T> struct, Supplier<T> supplier) {
-        publishers.add(
-            new Pair<>(
+    public <T> void addStructPublisher(String name, Struct<T> struct, Supplier<T> supplier) {
+        structPublishers.add(
+            new StructPublisherEntry<T>(
+                NetworkTableInstance.getDefault()
+                    .getStructTopic("SmartDashboard/" + name, struct).publish(), 
+                supplier));
+    }
+
+    public <T> void addStructArrayPublisher(String name, Struct<T> struct, Supplier<T[]> supplier) {
+        structArrayPublishers.add(
+            new StructArrayPublisherEntry<>(
                 NetworkTableInstance.getDefault()
                     .getStructArrayTopic("SmartDashboard/" + name, struct).publish(), 
-                    supplier));
+                supplier));
     }
 
     public void addSendable(Sendable sendable) {

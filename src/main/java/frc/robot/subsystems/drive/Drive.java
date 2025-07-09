@@ -13,14 +13,10 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.*;
-import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.networktables.StructArrayPublisher;
-import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -34,7 +30,7 @@ import frc.robot.lib.swerve.*;
 import frc.robot.lib.trajectory.RedTrajectory;
 import frc.robot.lib.util.Conversions;
 import frc.robot.lib.util.Util;
-
+import frc.robot.subsystems.TelemetryManager;
 import frc.robot.CancoderManager;
 
 public class Drive extends SubsystemBase {
@@ -76,15 +72,6 @@ public class Drive extends SubsystemBase {
 
     private final SlewRateLimiter accelLimiter;
     private final SlewRateLimiter rotationAccelLimiter;
-    
-    private final StructArrayPublisher<SwerveModuleState> desiredStatesPublisher = NetworkTableInstance.getDefault()
-        .getStructArrayTopic("SmartDashboard/Drive/States_Desired", SwerveModuleState.struct).publish();
-    private final StructArrayPublisher<SwerveModuleState> measuredStatesPublisher = NetworkTableInstance.getDefault()
-        .getStructArrayTopic("SmartDashboard/Drive/States_Measured", SwerveModuleState.struct).publish();
-    private final StructPublisher<Rotation2d> rotationPublisher = NetworkTableInstance.getDefault()
-        .getStructTopic("SmartDashboard/Drive/Rotation", Rotation2d.struct).publish();
-    private final StructPublisher<ChassisSpeeds> chassisSpeedsPublisher = NetworkTableInstance.getDefault()
-        .getStructTopic("SmartDashboard/Drive/ChassisSpeeds", ChassisSpeeds.struct).publish();
 
     public Drive() {
         io = new DriveIO();
@@ -105,12 +92,25 @@ public class Drive extends SubsystemBase {
         rotationAccelLimiter = new SlewRateLimiter(Constants.Drive.MAX_ROTATION_ACCEL);
         wheelTracker = new WheelTracker(swerveModules);
         pigeon = Pigeon.getInstance();
-        driveController = new PIDHolonomicDriveController2(
+        driveController = new ProfiledPIDHolonomicDriveController(
             Constants.Auto.TRANSLATION_CONSTANTS2, 
             Constants.Auto.ROTATION_CONSTANTS, 
             Constants.Auto.ACCELERATION_CONSTANT);
         pathFinder = new CustomADStar();
-        SmartDashboard.putData(this);
+
+        TelemetryManager.getInstance().addSendable(this);
+        TelemetryManager.getInstance().addStructPublisher(
+            "Drive/TargetChassisSpeeds", 
+            ChassisSpeeds.struct, () -> io.targetSpeeds);
+        TelemetryManager.getInstance().addStructPublisher(
+            "Drive/Rotation", 
+            Rotation2d.struct, () -> wheelTracker.getRobotPose().getRotation());
+        TelemetryManager.getInstance().addStructArrayPublisher(
+            "Drive/TargetModuleStates", 
+            SwerveModuleState.struct, () -> io.targetModuleStates);
+        TelemetryManager.getInstance().addStructArrayPublisher(
+            "Drive/ModuleStates", 
+            SwerveModuleState.struct, this::getModuleStates);
     }
 
 
@@ -150,14 +150,6 @@ public class Drive extends SubsystemBase {
         }
 
         FieldLayout.field.setRobotPose(wheelTracker.getRobotPose());
-
-		SwerveModuleState[] other = io.targetModuleStates.clone();
-
-        desiredStatesPublisher.set(other);
-		chassisSpeedsPublisher.set(io.targetSpeeds);
-		Rotation2d rotation = wheelTracker.getRobotPose().getRotation();
-		rotationPublisher.set(rotation);
-		measuredStatesPublisher.set(getModuleStates());
     }
 
     @Override
@@ -165,9 +157,13 @@ public class Drive extends SubsystemBase {
         pigeon.setSimAngularVelocity(io.targetSpeeds.omegaRadiansPerSecond);
     }
 
-    public BooleanSupplier interruptor() {
-        return (() -> false);
-    }
+    public BooleanSupplier isInterrupted = 
+        (() -> !Robot.isAuto && !Util.MathUtils.allCloseTo(
+            new Double[] {
+                Robot.controller.getLeftX(), 
+                Robot.controller.getLeftY(), 
+                Robot.controller.getRightX()}, 
+                0, Constants.Controllers.DRIVER_DEADBAND));
 
     /**
      * A command that updates the target speeds, based on input from the controller.
@@ -180,13 +176,13 @@ public class Drive extends SubsystemBase {
             .andThen(Commands.run(
                 () -> setSpeedsFromController(
                     MathUtil.applyDeadband(
-                        Robot.getController().getLeftX(), 
+                        Robot.controller.getLeftX(), 
                         Constants.Controllers.DRIVER_DEADBAND),
                     MathUtil.applyDeadband(
-                        Robot.getController().getLeftY(), 
+                        Robot.controller.getLeftY(), 
                         Constants.Controllers.DRIVER_DEADBAND),
                     MathUtil.applyDeadband(
-                        Robot.getController().getRightX(), 
+                        Robot.controller.getRightX(), 
                         Constants.Controllers.DRIVER_DEADBAND)), this));
     }
 
@@ -201,7 +197,9 @@ public class Drive extends SubsystemBase {
         }
 
         return Commands.runOnce(() -> setTrajectory(trajectory), this)
-            .andThen(Commands.waitUntil(driveController::isDone))
+            .andThen(Commands.race(
+                Commands.waitUntil(driveController::isDone),
+                Commands.waitUntil(isInterrupted)))
             .andThen(Commands.runOnce(this::setTeleop));
     }
 
@@ -229,25 +227,24 @@ public class Drive extends SubsystemBase {
                                     new GoalEndState(0, pose.getRotation()))
                             .getIdealTrajectory(Constants.Pathplanner.config)
                             .get(), 
-                            false));
+                            false)).schedule();
                     } catch (Exception e) {
                         DriverStation.reportError("Trajectory failed to generate! "
-                            + e.getMessage(), true);}}));
+                            + e.getMessage(), true);}}, this));
     }
 
     /**
      * A command to set the robot into X-lock, meaning to arrange the wheels into an X-shaped configuration.
      */
-    public Command xLockCommand() {
-        return Commands.runOnce(this::setXLock);
-    }
+    public Command xLockCommand = 
+        Commands.runOnce(this::setXLock).andThen(Commands.waitUntil(isInterrupted));
 
     /**
      * A command that aligns the swerves prior to some precise movement.
      */
     public Command prepareCommand(ChassisSpeeds speeds, double duration) {
         return Commands.runOnce(() -> setPreparing(speeds)).andThen(Commands.waitSeconds(duration))
-            .andThen(Commands.waitUntil(interruptor()));
+            .andThen(Commands.waitUntil(isInterrupted));
     }    
     
     /**
@@ -444,6 +441,10 @@ public class Drive extends SubsystemBase {
         double rawOmega = rawSpeeds.omegaRadiansPerSecond;
 
         double rawSpeed = Math.hypot(rawVx, rawVy);
+        if (rawSpeed < Constants.DEADBAND) {
+            return new ChassisSpeeds();
+        }
+        
         double limitedSpeed = accelLimiter.calculate(rawSpeed);
         
         double vx = MathUtil.applyDeadband(

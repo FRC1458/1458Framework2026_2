@@ -9,6 +9,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * Contains various field dimensions and useful reference points. Dimensions are
@@ -38,6 +39,7 @@ public class FieldLayout {
 		try {
 			APRILTAG_MAP = AprilTagFieldLayout.loadFromResource(AprilTagFields.kDefaultField.m_resourceFile);
 			field = new Field2d();
+			SmartDashboard.putData(field);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}

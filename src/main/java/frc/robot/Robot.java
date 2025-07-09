@@ -22,13 +22,11 @@ import frc.robot.subsystems.vision.VisionDeviceManager;
 public class Robot extends TimedRobot {
 	private static final CommandScheduler commandScheduler = CommandScheduler.getInstance();;
 	private static Command autoCommand;
+	public static boolean isAuto;
 
-	private static final CommandXboxController controller =
+	public static final CommandXboxController controller =
 		new CommandXboxController(Controllers.DRIVER_CONTROLLER_PORT);
-
-	public static CommandXboxController getController() {
-		return controller;
-	}
+		
 	/**
 	 * This function is run when the robot is first started up and should be used for any
 	 * initialization code.
@@ -38,6 +36,8 @@ public class Robot extends TimedRobot {
 			// TODO: remove this
 			DriverStationSim.setAllianceStationId(AllianceStationID.Blue1);
 		}
+
+		isAuto = false;
 		
 		RobotState.reset(Timer.getFPGATimestamp(), new Pose2d());
 		RobotState.resetKalman();
@@ -77,6 +77,7 @@ public class Robot extends TimedRobot {
 	/** This autonomous runs the autonomous command selected. */
 	@Override
 	public void autonomousInit() {
+		isAuto = true;
 		RobotState.setAlliance(DriverStation.getAlliance());
 		autoCommand = AutoRoutines.driveAuto();
 
@@ -94,7 +95,7 @@ public class Robot extends TimedRobot {
 	/** This function is called when autonomous mode ends. */
 	@Override
 	public void autonomousExit() {
-		doNothing();
+		isAuto = true;
 	}
 
 	@Override

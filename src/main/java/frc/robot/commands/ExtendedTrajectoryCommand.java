@@ -37,7 +37,7 @@ public class ExtendedTrajectoryCommand extends Command {
 	@Override
 	public void end(boolean interrupted) {
 		if (interrupted) {
-			for (Pair<Double,Command> trigger : triggers) {
+			for (Pair<Double, Command> trigger : triggers) {
 				if (trigger.getSecond().isScheduled() && !trigger.getSecond().isFinished()){
 					trigger.getSecond().cancel();
 				}

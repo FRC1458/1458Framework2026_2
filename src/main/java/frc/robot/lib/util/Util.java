@@ -18,7 +18,7 @@ public class Util {
 	 */
 	private Util() {}
 
-	public static class MathUtil {
+	public static class MathUtils {
 		/**
 		 * Limits the given input to the given magnitude.
 		 */
@@ -69,7 +69,7 @@ public class Util {
 			return (a - epsilon <= b) && (a + epsilon >= b);
 		}
 
-		public static boolean allCloseTo(final List<Double> list, double value, double epsilon) {
+		public static boolean allCloseTo(Double[] list, double value, double epsilon) {
 			boolean result = true;
 			for (Double value_in : list) {
 				result &= epsilonEquals(value_in, value, epsilon);
@@ -122,7 +122,7 @@ public class Util {
 
 	public static double scaledDeadband(double value, double maxValue, double deadband) {
 		double deadbandedValue = deadBand(value, deadband);
-		if (MathUtil.epsilonEquals(deadbandedValue, 0.0)) return 0.0;
+		if (MathUtils.epsilonEquals(deadbandedValue, 0.0)) return 0.0;
 		return Math.signum(deadbandedValue) * ((Math.abs(deadbandedValue) - deadband) / (maxValue - deadband));
 	}
 
@@ -223,9 +223,9 @@ public class Util {
 
 	//compare delta of two chassisspeeds is less than epsilon
 	public static boolean chassisSpeedsEpsilonEquals(ChassisSpeeds speed1, ChassisSpeeds other, double epsilon) {
-		return MathUtil.epsilonEquals(speed1.vxMetersPerSecond, other.vxMetersPerSecond, epsilon)
-				&& MathUtil.epsilonEquals(speed1.vyMetersPerSecond, other.vyMetersPerSecond, epsilon)
-				&& MathUtil.epsilonEquals(speed1.omegaRadiansPerSecond, other.omegaRadiansPerSecond, epsilon);
+		return MathUtils.epsilonEquals(speed1.vxMetersPerSecond, other.vxMetersPerSecond, epsilon)
+				&& MathUtils.epsilonEquals(speed1.vyMetersPerSecond, other.vyMetersPerSecond, epsilon)
+				&& MathUtils.epsilonEquals(speed1.omegaRadiansPerSecond, other.omegaRadiansPerSecond, epsilon);
 	}
 
 
