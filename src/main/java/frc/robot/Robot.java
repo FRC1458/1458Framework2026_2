@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.Controllers;
 import frc.robot.commands.*;
+import frc.robot.subsystems.TelemetryManager;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.vision.VisionDeviceManager;
 
@@ -34,7 +35,7 @@ public class Robot extends TimedRobot {
 	public Robot() {
 		if (Robot.isSimulation()) {
 			// TODO: remove this
-			DriverStationSim.setAllianceStationId(AllianceStationID.Blue1);
+			
 		}
 
 		isAuto = false;
@@ -44,6 +45,7 @@ public class Robot extends TimedRobot {
 
 		Drive.getInstance();
 		VisionDeviceManager.getInstance();
+		TelemetryManager.getInstance();
 	}
 
 	/**
@@ -106,6 +108,7 @@ public class Robot extends TimedRobot {
 		}
 
 		Drive.getInstance().setDefaultCommand(Drive.getInstance().teleopCommand());
+		controller.a().onTrue(Commands.runOnce(() -> DriverStationSim.setAllianceStationId(AllianceStationID.Blue1)));
 		controller.b().onTrue(Drive.getInstance().driveToPoseCommand(
 			new Pose2d(5.0, 5.0, Rotation2d.fromDegrees(80))));
 	}

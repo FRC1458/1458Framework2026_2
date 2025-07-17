@@ -48,6 +48,7 @@ public class TelemetryManager extends SubsystemBase {
         sendables = new ArrayList<>();
     }
 
+    @Override
     public void periodic() {
         for (StructArrayPublisherEntry<?> entry : structArrayPublishers) {
             entry.publish();

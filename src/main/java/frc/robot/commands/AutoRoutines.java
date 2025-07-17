@@ -12,11 +12,11 @@ public final class AutoRoutines {
 	public static Command driveAuto() {
 		RedTrajectory traj = TrajectoryLoader.loadAutoTrajectory(TrajectoryType.PATHPLANNER, "zisen").get();
 		if (Robot.isSimulation()) {
-			return Drive.getInstance().runOnce(() -> Drive.getInstance().resetPose(traj.getInitialState().pose))
-						.andThen(Drive.getInstance().prepareCommand(traj.getInitialState().speeds, 1))
-						.andThen(Drive.getInstance().trajectoryCommand(traj));
+			return Drive.getInstance()
+				.runOnce(() -> Drive.getInstance().resetPose(traj.getInitialState().pose))
+				.andThen(Drive.getInstance().trajectoryCommand(traj));
 		}
 		return Drive.getInstance().prepareCommand(traj.getInitialState().speeds, 1)
-					.andThen(Drive.getInstance().trajectoryCommand(traj));
+			.andThen(Drive.getInstance().trajectoryCommand(traj));
 	}
 }

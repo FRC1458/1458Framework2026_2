@@ -246,10 +246,10 @@ public final class Constants {
 			}
 		}
 		public static final PathConstraints GLOBAL_CONSTRAINTS = 
-			new PathConstraints(Drive.MAX_SPEED, 
-								Drive.MAX_ACCEL, 
-								Drive.MAX_ROTATION_SPEED, 
-								Drive.MAX_ROTATION_ACCEL);
+			new PathConstraints(Drive.MAX_SPEED * 0.85, 
+								Drive.MAX_ACCEL * 0.85, 
+								Drive.MAX_ROTATION_SPEED * 0.85, 
+								Drive.MAX_ROTATION_ACCEL * 0.85);
 		public static final double GENERATION_WAIT_TIME = 5;
 	}
 }

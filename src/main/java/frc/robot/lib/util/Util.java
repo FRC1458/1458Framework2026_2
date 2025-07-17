@@ -239,4 +239,8 @@ public class Util {
 	public static double twist2dMagnitude(Twist2d t) {
 		return Math.sqrt(t.dx * t.dx + t.dy * t.dy);
 	}
+
+	public static ChassisSpeeds fromTwist2d(Twist2d t) {
+		return new ChassisSpeeds(t.dx, t.dy, t.dtheta);
+	}
 }

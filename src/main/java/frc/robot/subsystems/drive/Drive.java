@@ -30,8 +30,8 @@ import frc.robot.lib.swerve.*;
 import frc.robot.lib.trajectory.RedTrajectory;
 import frc.robot.lib.util.Conversions;
 import frc.robot.lib.util.Util;
+import frc.robot.subsystems.CancoderManager;
 import frc.robot.subsystems.TelemetryManager;
-import frc.robot.CancoderManager;
 
 public class Drive extends SubsystemBase {
     private static Drive driveInstance;
@@ -103,6 +103,11 @@ public class Drive extends SubsystemBase {
             "Drive/TargetChassisSpeeds", 
             ChassisSpeeds.struct, () -> io.targetSpeeds);
         TelemetryManager.getInstance().addStructPublisher(
+            "Drive/ChassisSpeeds", 
+            ChassisSpeeds.struct, () -> 
+            ChassisSpeeds.fromFieldRelativeSpeeds(
+                Util.fromTwist2d(RobotState.getMeasuredVelocity()), RobotState.getLatestFieldToVehicle().getRotation()));
+        TelemetryManager.getInstance().addStructPublisher(
             "Drive/Rotation", 
             Rotation2d.struct, () -> wheelTracker.getRobotPose().getRotation());
         TelemetryManager.getInstance().addStructArrayPublisher(
@@ -113,15 +118,9 @@ public class Drive extends SubsystemBase {
             SwerveModuleState.struct, this::getModuleStates);
     }
 
-
     @Override
     public void periodic() {        
         updateOdometry();
-        pathFinder.setIdealStartingState(
-            new IdealStartingState(
-                Util.twist2dMagnitude(RobotState.getSmoothedVelocity()),
-                RobotState.getLatestFieldToVehicle().getRotation()));
-        pathFinder.setStartPosition(RobotState.getLatestFieldToOdom());
         switch (state) {
             case TELEOP:
                 setModuleTargetStates(io.targetSpeeds);
@@ -213,8 +212,15 @@ public class Drive extends SubsystemBase {
             return Commands.none();
         }
 
-        return Commands.runOnce(() -> 
-            pathFinder.setGoalPosition(pose.getTranslation())).andThen(
+        return Commands.runOnce(
+            () -> {     
+                pathFinder.setIdealStartingState(
+                    new IdealStartingState(
+                        Util.twist2dMagnitude(RobotState.getSmoothedVelocity()),
+                        RobotState.getLatestFieldToVehicle().getRotation()));
+                pathFinder.setStartPosition(RobotState.getLatestFieldToOdom());
+                pathFinder.setGoalPosition(pose.getTranslation());})
+            .andThen(
                 Commands.race(
                     Commands.waitUntil(() -> pathFinder.isNewPathAvailable()),
                     Commands.waitSeconds(Constants.Pathplanner.GENERATION_WAIT_TIME)),
