@@ -128,16 +128,16 @@ public final class Constants {
 
 	public static final class Auto {
 		public static final PIDFConstants TRANSLATION_CONSTANTS = 
-			new PIDFConstants(5.5,0.0,0.0,1.0);
+			new PIDFConstants(3.5, 0.0, 0.0, 1.0);
 
 		public static final ProfiledPIDFConstants TRANSLATION_CONSTANTS2 = 
-			new ProfiledPIDFConstants(5.5,0.0, 0.0, 1.0, 
+			new ProfiledPIDFConstants(3.5, 0.0, 0.0, 1.0, 
 				new TrapezoidProfile.Constraints(
 					Drive.MAX_SPEED, 
 					Drive.MAX_ACCEL));
 
 		public static final ProfiledPIDFConstants ROTATION_CONSTANTS = 
-			new ProfiledPIDFConstants(4.0,0.0, 0.0, 1.0, 
+			new ProfiledPIDFConstants(4.0, 0.0, 0.0, 1.0, 
 				new TrapezoidProfile.Constraints(
 					Drive.MAX_ROTATION_SPEED, 
 					Drive.MAX_ROTATION_ACCEL));
@@ -195,7 +195,7 @@ public final class Constants {
 		}
     }
 
-	public static enum Tuning {
+	public static enum Calibration {
 		DriveRotation (
 			Units.Volts.of(1).per(Units.Second),
 			Units.Volts.of(7)),
@@ -214,7 +214,7 @@ public final class Constants {
 
 		public final Velocity<VoltageUnit> RAMP_RATE;
 		public final Voltage DYNAMIC_VOLTAGE;
-		private Tuning(Velocity<VoltageUnit> rampRate, Voltage dynamicVoltage) {
+		private Calibration(Velocity<VoltageUnit> rampRate, Voltage dynamicVoltage) {
 			RAMP_RATE = rampRate;
 			DYNAMIC_VOLTAGE = dynamicVoltage;
 		}
