@@ -35,10 +35,7 @@ public class ControlConstants {
             this.kF = f;
         }
         public PIDFConstants(PIDConstants constants) {
-            this.kP = constants.kP;
-            this.kI = constants.kI;
-            this.kD = constants.kD;
-            this.kF = 0.0;
+            this(constants.kP, constants.kI, constants.kD, 0);
         }
     }
     
@@ -59,11 +56,7 @@ public class ControlConstants {
             this.constraints = constraints;
         }
         public ProfiledPIDFConstants(PIDConstants constants, TrapezoidProfile.Constraints constraints) {
-            this.kP = constants.kP;
-            this.kI = constants.kI;
-            this.kD = constants.kD;
-            this.kF = 0.0;
-            this.constraints = constraints;
+            this(constants.kP, constants.kI, constants.kD, 0, constraints);
         }
     }
 }

@@ -282,8 +282,8 @@ public class SwerveModule extends SubsystemBase {
     public SysIdRoutine angleRoutine() {
         return new SysIdRoutine(
             new SysIdRoutine.Config(
-                Constants.Tuning.AngleMotor.RAMP_RATE,
-                Constants.Tuning.AngleMotor.DYNAMIC_VOLTAGE,
+                Constants.Calibration.AngleMotor.RAMP_RATE,
+                Constants.Calibration.AngleMotor.DYNAMIC_VOLTAGE,
                 null,
                 recordState -> SignalLogger.writeString("/Sysid/Angle/State", recordState.toString())
             ), 
@@ -298,8 +298,8 @@ public class SwerveModule extends SubsystemBase {
     public SysIdRoutine driveRoutine() {
         return new SysIdRoutine(
             new SysIdRoutine.Config(
-                Constants.Tuning.DriveMotor.RAMP_RATE,
-                Constants.Tuning.DriveMotor.DYNAMIC_VOLTAGE,
+                Constants.Calibration.DriveMotor.RAMP_RATE,
+                Constants.Calibration.DriveMotor.DYNAMIC_VOLTAGE,
                 null,
                 recordState -> SignalLogger.writeString("/Sysid/Drive/State", recordState.toString())
             ), 

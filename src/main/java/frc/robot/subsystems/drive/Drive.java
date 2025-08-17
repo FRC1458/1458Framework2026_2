@@ -260,8 +260,8 @@ public class Drive extends SubsystemBase {
     public SysIdRoutine rotationRoutine() {
         return new SysIdRoutine(
             new SysIdRoutine.Config(
-                Constants.Tuning.DriveRotation.RAMP_RATE,
-                Constants.Tuning.DriveRotation.DYNAMIC_VOLTAGE,
+                Constants.Calibration.DriveRotation.RAMP_RATE,
+                Constants.Calibration.DriveRotation.DYNAMIC_VOLTAGE,
                 null,
                 state -> SignalLogger.writeString("/Sysid/DriveRotation/State", state.toString())
             ), 
@@ -277,8 +277,8 @@ public class Drive extends SubsystemBase {
     public SysIdRoutine translationRoutine() {
         return new SysIdRoutine(
             new SysIdRoutine.Config(
-                Constants.Tuning.DriveTranslation.RAMP_RATE,
-                Constants.Tuning.DriveTranslation.DYNAMIC_VOLTAGE,
+                Constants.Calibration.DriveTranslation.RAMP_RATE,
+                Constants.Calibration.DriveTranslation.DYNAMIC_VOLTAGE,
                 null,
                 state -> SignalLogger.writeString("/Sysid/DriveTranslation/State", state.toString())), 
             new SysIdRoutine.Mechanism(
