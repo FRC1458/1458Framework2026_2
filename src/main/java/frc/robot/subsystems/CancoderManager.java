@@ -102,9 +102,9 @@ public class CancoderManager {
 
 	public boolean allHaveBeenInitialized() {
 		return flObs.hasUpdate()
-				&& frObs.hasUpdate()
-				&& blObs.hasUpdate()
-				&& brObs.hasUpdate();
+			&& frObs.hasUpdate()
+			&& blObs.hasUpdate()
+			&& brObs.hasUpdate();
 	}
 
 	public CANcoder getFrontLeft() {

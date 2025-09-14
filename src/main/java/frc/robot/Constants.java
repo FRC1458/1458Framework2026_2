@@ -41,6 +41,10 @@ public final class Constants {
 				Math.pow(0.02, 1));
 	}
 
+	public static final class Mover {
+		public static final int driverId = 1234;
+	}
+
 	public static final class Drive {
 		public static final COTSTalonFXSwerveConstants SWERVE_MODULE_TYPE =
 			COTSTalonFXSwerveConstants.SDS.MK4i.KrakenX60(COTSTalonFXSwerveConstants.SDS.MK4i.driveRatios.L3);
@@ -225,6 +229,7 @@ public final class Constants {
 		FR_CANCODER (6, "CV"),
 		BL_CANCODER (14, "CV"),
 		BR_CANCODER (1, "CV"),
+		DR_CANCODER (1234, "CV"),
 		LEDS (21, "CV"),
 		PIGEON (60, "CV");
 

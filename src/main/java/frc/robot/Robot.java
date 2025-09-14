@@ -107,10 +107,9 @@ public class Robot extends TimedRobot {
 			autoCommand.cancel();
 		}
 
-		Drive.getInstance().setDefaultCommand(Drive.getInstance().teleopCommand());
 		controller.a().onTrue(Commands.runOnce(() -> DriverStationSim.setAllianceStationId(AllianceStationID.Blue1)));
-		controller.b().onTrue(Drive.getInstance().driveToPoseCommand(
-			new Pose2d(5.0, 5.0, Rotation2d.fromDegrees(80))));
+		// controller.b().onTrue(Drive.getInstance().driveToPoseCommand(
+		// 	new Pose2d(5.0, 5.0, Rotation2d.fromDegrees(80))));
 	}
 
 	/** This function is called periodically during operator control. */

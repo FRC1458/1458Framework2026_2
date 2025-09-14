@@ -7,7 +7,7 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile;
  */
 public class ControlConstants {
     /**
-     * Constants used for a {@link PIDController}
+     * Constants used for a {@link PidController}
      */
     public static class PIDConstants {
         public final double kP;

@@ -1,6 +1,5 @@
-package frc.robot.lib.swerve;
+package frc.robot.commands;
 
-import frc.robot.lib.control.ControlConstants.*;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -9,18 +8,25 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
+import frc.robot.RobotState;
+import frc.robot.lib.control.ControlConstants.PIDFConstants;
+import frc.robot.lib.control.ControlConstants.ProfiledPIDFConstants;
 import frc.robot.lib.control.PidvController;
 import frc.robot.lib.control.ProfiledPIDVController;
 import frc.robot.lib.trajectory.RedTrajectory;
+import frc.robot.subsystems.drive.Drive;
 
-public class ProfiledPIDHolonomicDriveController implements DriveController {
-    private final ProfiledPIDVController xController;
-    private final ProfiledPIDVController yController;
+public class TrajectoryCommand extends Command {
+    public final Drive drive;
+
+    private final PidvController xController;
+    private final PidvController yController;
     private final ProfiledPIDVController thetaController;
     private double accelConstant;
 
-    private RedTrajectory trajectory;
+    private final RedTrajectory trajectory;
     private Pose2d currentPose;
     private ChassisSpeeds currentSpeeds;
 
@@ -31,26 +37,48 @@ public class ProfiledPIDHolonomicDriveController implements DriveController {
 		SmartDashboard.putData("debug", field);
     }
 
+    public TrajectoryCommand(RedTrajectory trajectory) {
+        this.drive = Drive.getInstance();
+        this.trajectory = trajectory;
+        this.xController = new PidvController(Constants.Auto.TRANSLATION_CONSTANTS);
+        this.yController = new PidvController(Constants.Auto.TRANSLATION_CONSTANTS);
+        thetaController = new ProfiledPIDVController(Constants.Auto.ROTATION_CONSTANTS);
+        thetaController.enableContinuousInput(-Math.PI, Math.PI);
+        this.accelConstant = Constants.Auto.ACCELERATION_CONSTANT;
+
+        timer = new Timer();
+    }
+    
     /**
      * A drive controller that works with 2 {@link PidvController}s for translation and one {@link ProfiledPIDVController} for rotation.
      * @param translationConstants The {@link PIDFConstants} for the translation of the robot.
      * @param rotationConstants The {@link ProfiledPIDFConstants} for the rotation of the robot.
      * @param accelConstant The acceleration feedforwards (useful for traversing sharp turns on a trajectory).
      */
-    public ProfiledPIDHolonomicDriveController(ProfiledPIDFConstants translationConstants, ProfiledPIDFConstants rotationConstants, double accelConstant) {
-        xController = new ProfiledPIDVController(translationConstants);
-        yController = new ProfiledPIDVController(translationConstants);
+    public TrajectoryCommand(Drive drive, RedTrajectory trajectory, PIDFConstants translationConstants, ProfiledPIDFConstants rotationConstants, double accelConstant) {
+        this.drive = drive;
+        this.trajectory = trajectory;
+        xController = new PidvController(translationConstants);
+        yController = new PidvController(translationConstants);
         thetaController = new ProfiledPIDVController(rotationConstants);
         thetaController.enableContinuousInput(-Math.PI, Math.PI);
         this.accelConstant = accelConstant;
+
         timer = new Timer();
+        addRequirements(drive);
+        setName("Trajectory " + trajectory.name);
     }
 
     @Override
-    public void setTrajectory(RedTrajectory trajectory) {
-        this.trajectory = trajectory;
-        timer.reset();
+    public void initialize() {
         timer.start();
+    }
+
+    @Override
+    public void execute() {
+        setRobotState(
+            RobotState.getLatestFieldToVehicle(), RobotState.getSmoothedVelocity());
+        drive.setTargetSpeeds(calculateSpeeds());
     }
 
     public void setRobotState(Pose2d pose, Twist2d speeds) {
@@ -58,12 +86,7 @@ public class ProfiledPIDHolonomicDriveController implements DriveController {
         this.currentSpeeds = new ChassisSpeeds(speeds.dx, speeds.dy, speeds.dtheta);
     }
 
-    public void setInput(Pair<Pose2d, Twist2d> current) {
-        setRobotState(current.getFirst(), current.getSecond());
-    }
-
-    @Override
-    public ChassisSpeeds getOutput() {
+    public ChassisSpeeds calculateSpeeds() {
         if (trajectory == null || currentPose == null || currentSpeeds == null || trajectory.isDone()) {
             return new ChassisSpeeds();
         }
@@ -110,15 +133,17 @@ public class ProfiledPIDHolonomicDriveController implements DriveController {
 		SmartDashboard.putData("debug", field);
 
         return ChassisSpeeds.fromFieldRelativeSpeeds(
-                vx + xAccelFF * accelConstant,
-                vy + yAccelFF * accelConstant,
-                rotation,
-                currentPose.getRotation());
+            vx + xAccelFF * accelConstant,
+            vy + yAccelFF * accelConstant,
+            rotation,
+            currentPose.getRotation());
     }
 
     @Override
-    public boolean isDone() {
-        if (trajectory == null) return true;
+    public boolean isFinished() {
+        if (trajectory == null) {
+            return true;
+        }
         if (trajectory.isDone()) {
             System.out.println("Done with trajectory, error: " + Math.hypot(xController.error, yController.error));
             return true;
@@ -126,23 +151,6 @@ public class ProfiledPIDHolonomicDriveController implements DriveController {
         return false;
     }
 
-    @Override
-    public void reset() {
-        xController.reset();
-        yController.reset();
-        thetaController.reset();
-    
-        trajectory = null;
-        currentPose = null;
-        currentSpeeds = null;
-    
-        if (timer != null) {
-            timer.stop();
-            timer.reset();
-        }
-    }
-
-    @Override
     public RedTrajectory getTrajectory() {
         return trajectory;
     }
