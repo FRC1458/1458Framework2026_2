@@ -81,7 +81,7 @@ public class Robot extends TimedRobot {
 	public void autonomousInit() {
 		isAuto = true;
 		RobotState.setAlliance(DriverStation.getAlliance());
-		autoCommand = AutoRoutines.driveAuto();
+		autoCommand = AutoRoutines.autopilotAuto();
 
 		if (autoCommand != null) {
 			autoCommand.schedule();

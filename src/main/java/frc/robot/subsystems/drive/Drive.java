@@ -98,6 +98,11 @@ public class Drive extends SubsystemBase {
         pathFinder = new CustomADStar();
 
         TelemetryManager.getInstance().addStructPublisher(
+            "Drive/Pose", 
+            Pose2d.struct, 
+            () -> RobotState.getLatestFieldToVehicle());
+
+        TelemetryManager.getInstance().addStructPublisher(
             "Drive/TargetChassisSpeeds", 
             ChassisSpeeds.struct, () -> io.targetSpeeds);
         TelemetryManager.getInstance().addStructPublisher(
@@ -116,6 +121,7 @@ public class Drive extends SubsystemBase {
             SwerveModuleState.struct, this::getModuleStates);
 
         setDefaultCommand(teleopCommand());
+        TelemetryManager.getInstance().addSendable(this);
     }
 
     @Override
@@ -192,7 +198,8 @@ public class Drive extends SubsystemBase {
                         Constants.Controllers.DRIVER_DEADBAND),
                     MathUtil.applyDeadband(
                         Robot.controller.getRightX(), 
-                        Constants.Controllers.DRIVER_DEADBAND));}, this).withName("Teleop");
+                        Constants.Controllers.DRIVER_DEADBAND));
+            }, this).withName("Teleop");
     }
 
     /**
@@ -454,8 +461,12 @@ public class Drive extends SubsystemBase {
         double rawOmega = rawSpeeds.omegaRadiansPerSecond;
 
         double rawSpeed = Math.hypot(rawVx, rawVy);
+
+        double omega = MathUtil.clamp(
+            rotationAccelLimiter.calculate(rawOmega),
+            -Constants.Drive.MAX_ROTATION_SPEED, Constants.Drive.MAX_ROTATION_SPEED);
         if (rawSpeed < Constants.DEADBAND) {
-            return new ChassisSpeeds();
+            return new ChassisSpeeds(0, 0, omega);
         }
         
         double limitedSpeed = accelLimiter.calculate(rawSpeed);
@@ -464,10 +475,6 @@ public class Drive extends SubsystemBase {
             rawVx / rawSpeed * limitedSpeed, Constants.DEADBAND);
         double vy = MathUtil.applyDeadband(
             rawVy / rawSpeed * limitedSpeed, Constants.DEADBAND);
-
-        double omega = MathUtil.clamp(
-            rotationAccelLimiter.calculate(rawOmega),
-            -Constants.Drive.MAX_ROTATION_SPEED, Constants.Drive.MAX_ROTATION_SPEED);
 
         return new ChassisSpeeds(vx, vy, omega);
     }
@@ -487,9 +494,14 @@ public class Drive extends SubsystemBase {
     @Override
     public void initSendable(SendableBuilder builder) {
         super.initSendable(builder);
-        Command currentCommand = getCurrentCommand();
-        builder.addStringProperty("/Trajectory", () -> 
-            currentCommand.getName().contains("Trajectory") ? 
-                ((TrajectoryCommand) currentCommand).getTrajectory().name : "none", null);
+        builder.addStringProperty("/Trajectory", () -> {
+            Command currentCommand = getCurrentCommand();
+            if (currentCommand != null) {
+                return currentCommand.getName().contains("Trajectory") ? 
+                    ((TrajectoryCommand) currentCommand).getTrajectory().name : "none";
+            } else {
+                return "none";
+            }
+        }, null);
     }
 }

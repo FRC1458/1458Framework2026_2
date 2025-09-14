@@ -1,5 +1,8 @@
 package frc.robot;
 
+import static edu.wpi.first.units.Units.DegreesPerSecond;
+import static edu.wpi.first.units.Units.RadiansPerSecond;
+
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.path.PathConstraints;
 
@@ -64,10 +67,10 @@ public final class Constants {
 		public static final double DRIVE_GEAR_RATIO = SWERVE_MODULE_TYPE.driveGearRatio;
         public static final double ANGLE_GEAR_RATIO = SWERVE_MODULE_TYPE.angleGearRatio;
 
-		public static final double MAX_SPEED = 4.0;
+		public static final double MAX_SPEED = 2.0;
 		public static final double MAX_ACCEL = 3.0;
-		public static final double MAX_ROTATION_SPEED = 540.0;
-		public static final double MAX_ROTATION_ACCEL = 720.0;
+		public static final double MAX_ROTATION_SPEED = DegreesPerSecond.of(540.0).in(RadiansPerSecond);
+		public static final double MAX_ROTATION_ACCEL = DegreesPerSecond.of(2880.0).in(RadiansPerSecond);
 
 		public static final int ANGLE_CURRENT_LIMIT = 20;
         public static final int ANGLE_CURRENT_THRESHOLD = 30;
@@ -229,7 +232,6 @@ public final class Constants {
 		FR_CANCODER (6, "CV"),
 		BL_CANCODER (14, "CV"),
 		BR_CANCODER (1, "CV"),
-		DR_CANCODER (1234, "CV"),
 		LEDS (21, "CV"),
 		PIGEON (60, "CV");
 
