@@ -10,7 +10,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants;
-import frc.robot.lib.control.PidvController;
+import frc.robot.lib.control.PIDVController;
 import frc.robot.lib.control.ProfiledPIDVController;
 import frc.robot.lib.trajectory.RedTrajectory;
 
@@ -32,7 +32,7 @@ public class ProfiledPIDHolonomicDriveController implements DriveController {
     }
 
     /**
-     * A drive controller that works with 2 {@link PidvController}s for translation and one {@link ProfiledPIDVController} for rotation.
+     * A drive controller that works with 2 {@link PIDVController}s for translation and one {@link ProfiledPIDVController} for rotation.
      * @param translationConstants The {@link PIDFConstants} for the translation of the robot.
      * @param rotationConstants The {@link ProfiledPIDFConstants} for the rotation of the robot.
      * @param accelConstant The acceleration feedforwards (useful for traversing sharp turns on a trajectory).

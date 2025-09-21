@@ -10,13 +10,13 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants;
-import frc.robot.lib.control.PidvController;
+import frc.robot.lib.control.PIDVController;
 import frc.robot.lib.control.ProfiledPIDVController;
 import frc.robot.lib.trajectory.RedTrajectory;
 
 public class PIDHolonomicDriveController implements DriveController {
-    private final PidvController xController;
-    private final PidvController yController;
+    private final PIDVController xController;
+    private final PIDVController yController;
     private final ProfiledPIDVController thetaController;
     private double accelConstant;
 
@@ -32,14 +32,14 @@ public class PIDHolonomicDriveController implements DriveController {
     }
 
     /**
-     * A drive controller that works with 2 {@link PidvController}s for translation and one {@link ProfiledPIDVController} for rotation.
+     * A drive controller that works with 2 {@link PIDVController}s for translation and one {@link ProfiledPIDVController} for rotation.
      * @param translationConstants The {@link PIDFConstants} for the translation of the robot.
      * @param rotationConstants The {@link ProfiledPIDFConstants} for the rotation of the robot.
      * @param accelConstant The acceleration feedforwards (useful for traversing sharp turns on a trajectory).
      */
     public PIDHolonomicDriveController(PIDFConstants translationConstants, ProfiledPIDFConstants rotationConstants, double accelConstant) {
-        xController = new PidvController(translationConstants);
-        yController = new PidvController(translationConstants);
+        xController = new PIDVController(translationConstants);
+        yController = new PIDVController(translationConstants);
         thetaController = new ProfiledPIDVController(rotationConstants);
         thetaController.enableContinuousInput(-Math.PI, Math.PI);
         this.accelConstant = accelConstant;

@@ -22,7 +22,7 @@ public class ProfiledPIDVController implements Controller<Pair<Double, Double>, 
     private final Timer timer = new Timer();
 
     /**
-     * A {@link PidvController} with a trapezoid profile, used for limiting speed and acceleration.
+     * A {@link PIDVController} with a trapezoid profile, used for limiting speed and acceleration.
      * @param constants The {@link ProfiledPIDFConstants}.
      */
     public ProfiledPIDVController(ProfiledPIDFConstants constants) {
