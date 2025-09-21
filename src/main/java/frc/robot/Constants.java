@@ -11,8 +11,13 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.units.AngularVelocityUnit;
+import edu.wpi.first.units.LinearVelocityUnit;
+import edu.wpi.first.units.Measure;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.VoltageUnit;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.LinearVelocity;
 import edu.wpi.first.units.measure.Velocity;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -86,6 +91,15 @@ public final class Constants {
 		public static final double CLOSED_LOOP_RAMP = 0.0;
 
 		public static final boolean INVERT_GYRO = false;
+
+		public static final double MAX_VELOCITY_STABLE = 10; // degrees per second
+
+        public static final double MAX_PITCH_STABLE = 5; // degrees
+
+        public static final LinearVelocity kScoringTranslationMaxSpeed =
+			Units.Centimeters.of(15.0).per(Units.Seconds);
+		public static final AngularVelocity kScoringRotationMaxSpeed =
+			Units.Degrees.of(7.0).per(Units.Seconds); // oh god
 
 		public static enum ModuleConstants {
 			/** Module 0 */
