@@ -1,5 +1,6 @@
 package frc.robot;
 
+import frc.robot.auto.AutoSelector;
 import edu.wpi.first.hal.AllianceStationID;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -10,9 +11,10 @@ import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Constants.Controllers;
-import frc.robot.commands.*;
+import frc.robot.auto.*;
 import frc.robot.subsystems.TelemetryManager;
-import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.drive.*;
+import frc.robot.subsystems.drive.commands.TeleopCommand;
 import frc.robot.subsystems.vision.VisionDeviceManager;
 
 /**
@@ -21,9 +23,9 @@ import frc.robot.subsystems.vision.VisionDeviceManager;
  * this project, you must also update the Main.java file in the project.
  */
 public class Robot extends TimedRobot {
-	private static final CommandScheduler commandScheduler = CommandScheduler.getInstance();;
-	private static Command autoCommand;
-	public static boolean isAuto;
+	private static final CommandScheduler commandScheduler = CommandScheduler.getInstance();
+	public AutoSelector autoChooser;
+	private Command autoCommand;
 
 	public static final CommandXboxController controller =
 		new CommandXboxController(Controllers.DRIVER_CONTROLLER_PORT);
@@ -37,15 +39,15 @@ public class Robot extends TimedRobot {
 			// TODO: remove this
 			
 		}
-
-		isAuto = false;
 		
 		RobotState.reset(Timer.getFPGATimestamp(), new Pose2d());
 		RobotState.resetKalman();
 
-		Drive.getInstance();
+		Drive2.getInstance();
 		VisionDeviceManager.getInstance();
 		TelemetryManager.getInstance();
+
+		autoChooser = new AutoSelector();
 	}
 
 	/**
@@ -79,25 +81,24 @@ public class Robot extends TimedRobot {
 	/** This autonomous runs the autonomous command selected. */
 	@Override
 	public void autonomousInit() {
-		isAuto = true;
 		RobotState.setAlliance(DriverStation.getAlliance());
-		autoCommand = AutoRoutines.autopilotAuto();
+		autoCommand = autoChooser.getAuto();
 
 		if (autoCommand != null) {
 			autoCommand.schedule();
+		} else {
+			DriverStation.reportWarning("Tried to schedule a null auto", false);
 		}
 	}
 
 	/** This function is called periodically during autonomous. */
 	@Override
 	public void autonomousPeriodic() {
-		doNothing();
 	}
 
 	/** This function is called when autonomous mode ends. */
 	@Override
 	public void autonomousExit() {
-		isAuto = true;
 	}
 
 	@Override
@@ -107,15 +108,15 @@ public class Robot extends TimedRobot {
 			autoCommand.cancel();
 		}
 
-		controller.a().onTrue(Commands.runOnce(() -> DriverStationSim.setAllianceStationId(AllianceStationID.Blue1)));
 		// controller.b().onTrue(Drive.getInstance().driveToPoseCommand(
 		// 	new Pose2d(5.0, 5.0, Rotation2d.fromDegrees(80))));
+		Drive2.getInstance().setDefaultCommand(new TeleopCommand());
+		// Drive2.getInstance().setDefaultCommand(Drive2.getInstance().teleopCommand());
 	}
 
 	/** This function is called periodically during operator control. */
 	@Override
 	public void teleopPeriodic() {
-		doNothing();
 	}
 
 	@Override
@@ -127,7 +128,6 @@ public class Robot extends TimedRobot {
 	/** This function is called periodically during test mode. */
 	@Override
 	public void testPeriodic() {
-		doNothing();
 	}
 
 	/** This function is called once when the robot is first started up. */
@@ -139,8 +139,5 @@ public class Robot extends TimedRobot {
 	/** This function is called periodically whilst in simulation. */
 	@Override
 	public void simulationPeriodic() {
-		doNothing();
 	}
-
-	public static void doNothing() {}
 }

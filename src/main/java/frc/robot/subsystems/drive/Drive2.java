@@ -11,6 +11,7 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -26,11 +27,15 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.Robot;
+import frc.robot.RobotState;
+import frc.robot.lib.util.Util;
+import frc.robot.subsystems.TelemetryManager;
 import frc.robot.subsystems.drive.ctre.CtreConstants;
 import frc.robot.subsystems.drive.ctre.CtreDrive;
 import frc.robot.subsystems.drive.ctre.CtreDriveTelemetry;
 
 import java.util.function.UnaryOperator;
+import java.util.stream.Stream;
 
 public class Drive2 extends SubsystemBase {
 	private static Drive2 drive2Instance;
@@ -65,6 +70,25 @@ public class Drive2 extends SubsystemBase {
 		}
 
 		drivetrain.getOdometryThread().setThreadPriority(31);
+        // TelemetryManager.getInstance().addStructPublisher(
+        //     "Drive/TargetChassisSpeeds", 
+        //     ChassisSpeeds.struct, () -> lastReadState.Speeds);
+        // TelemetryManager.getInstance().addStructPublisher(
+        //     "Drive/ChassisSpeeds", 
+        //     ChassisSpeeds.struct, () -> 
+        //         lastReadState.Speeds);
+        // TelemetryManager.getInstance().addStructPublisher(
+        //     "Drive/Rotation", 
+        //     Rotation2d.struct, () -> lastReadState.Pose.getRotation());
+        // TelemetryManager.getInstance().addStructArrayPublisher(
+        //     "Drive/ModuleStates", 
+        //     SwerveModuleState.struct, () -> 
+        //         (SwerveModuleState[]) lastReadState.ModuleStates);
+        // TelemetryManager.getInstance().addStructArrayPublisher(
+        //     "Drive/TargetModuleStates", 
+        //     SwerveModuleState.struct, () -> 
+        //         (SwerveModuleState[]) lastReadState.ModuleTargets);
+        TelemetryManager.getInstance().addSendable(this);
 	}
 
 	public CtreDrive getGeneratedDrive() {
@@ -80,13 +104,13 @@ public class Drive2 extends SubsystemBase {
 	public void outputTelemetry() {
 		mechanismPublisher.set(new Pose3d(getPose()));
 		telemetry.telemeterize(lastReadState);
-		SmartDashboard.putData("Drive2", this);
 		elasticPose.setRobotPose(getPose());
 		SmartDashboard.putData("Elastic Field 2D", elasticPose);
 	}
 
 	@Override
 	public void initSendable(SendableBuilder builder) {
+        super.initSendable(builder);
 		builder.addDoubleProperty(
             "Pitch Velocity Degrees Per Second",
             () -> drivetrain
@@ -121,7 +145,7 @@ public class Drive2 extends SubsystemBase {
 
 	private void addModuleToBuilder(SendableBuilder builder, int module) {
 		builder.addDoubleProperty(
-            "ModuleStates/" + module + "/Drive2/Volts",
+            "ModuleStates/" + module + "/Drive/Volts",
             () -> drivetrain
                 .getModules()[module]
                 .getDriveMotor()
@@ -141,7 +165,7 @@ public class Drive2 extends SubsystemBase {
             null);
 
 		builder.addDoubleProperty(
-            "ModuleStates/" + module + "/Drive2/Stator Current",
+            "ModuleStates/" + module + "/Drive/Stator Current",
             () -> drivetrain
                 .getModules()[module]
                 .getDriveMotor()
@@ -151,7 +175,7 @@ public class Drive2 extends SubsystemBase {
             null);
 
 		builder.addDoubleProperty(
-            "ModuleStates/" + module + "/Drive2/Temperature Celsius",
+            "ModuleStates/" + module + "/Drive/Temperature Celsius",
             () -> drivetrain
                 .getModules()[module]
                 .getDriveMotor()
@@ -171,7 +195,7 @@ public class Drive2 extends SubsystemBase {
             null);
 
 		builder.addDoubleProperty(
-            "ModuleStates/" + module + "/Drive2/Supply Current",
+            "ModuleStates/" + module + "/Drive/Supply Current",
             () -> drivetrain
                 .getModules()[module]
                 .getDriveMotor()
@@ -216,14 +240,26 @@ public class Drive2 extends SubsystemBase {
 	public Command followSwerveRequestCommand(
 			SwerveRequest.FieldCentric request, UnaryOperator<SwerveRequest.FieldCentric> updater) {
 		return run(() -> setSwerveRequest(updater.apply(request)))
-				.handleInterrupt(() -> setSwerveRequest(new SwerveRequest.FieldCentric()));
+            .handleInterrupt(() -> setSwerveRequest(new SwerveRequest.FieldCentric()));
 	}
 
-	public void followChoreoTrajectory(SwerveSample sample) {
-        // TODO: implement this
-		// setSwerveRequest(
-		// 		DriveConstants.getPIDToPoseRequestUpdater(sample.getPose()).apply(DriveConstants.PIDToPoseRequest));
-	}
+    public Command teleopCommand() {
+        return run(() -> {
+            setSwerveRequest(new SwerveRequest.FieldCentric()
+                .withVelocityX(
+                    Util.deadBand(Robot.controller.getLeftX() * Constants.Drive.MAX_SPEED, Constants.Controllers.DRIVER_DEADBAND))
+                .withVelocityY(
+                    Util.deadBand(Robot.controller.getLeftY() * Constants.Drive.MAX_SPEED, Constants.Controllers.DRIVER_DEADBAND))
+                .withRotationalRate(
+                    Util.deadBand(Robot.controller.getRightX() * Constants.Drive.MAX_ROTATION_SPEED, Constants.Controllers.DRIVER_DEADBAND)));
+        });
+    }
+
+	// public void followChoreoTrajectory(SwerveSample sample) {
+    //     // TODO: implement this
+	// 	// setSwerveRequest(
+	// 	// 		DriveConstants.getPIDToPoseRequestUpdater(sample.getPose()).apply(DriveConstants.PIDToPoseRequest));
+	// }
 
 	public void addVisionUpdate(Pose2d pose, Time timestamp) {
 		getGeneratedDrive().addVisionMeasurement(pose, timestamp.in(Units.Seconds));
@@ -234,10 +270,9 @@ public class Drive2 extends SubsystemBase {
 	}
 
 	public void resetPose(Pose2d pose) {
-        // TODO: implement this
-		// getGeneratedDrive().resetPose(pose);
-		// lastPoseResetTime =
-		// 		Units.Seconds.of(Utils.getCurrentTimeSeconds()).plus(DriveConstants.updatePreventTimePostPoseReset);
+		getGeneratedDrive().resetPose(pose);
+		lastPoseResetTime =
+            Units.Seconds.of(Utils.getCurrentTimeSeconds()).plus(Constants.Drive.POSE_RESET_PREVENTION_TIME);
 	}
 
 	public Command resetPoseCmd(Pose2d pose) {
@@ -245,7 +280,6 @@ public class Drive2 extends SubsystemBase {
 	}
 
 	public boolean getPitchStable() {
-        // TODO: implement this
 		return drivetrain.getPigeon2().getAngularVelocityYDevice().getValue().abs(Units.DegreesPerSecond)
                 < Constants.Drive.MAX_VELOCITY_STABLE
             && drivetrain.getPigeon2().getPitch().getValue().abs(BaseUnits.AngleUnit)
@@ -253,7 +287,6 @@ public class Drive2 extends SubsystemBase {
 	}
 
 	public boolean getRollStable() {
-        // TODO: implement this
 		return drivetrain.getPigeon2().getAngularVelocityXDevice().getValue().abs(Units.DegreesPerSecond)
                 < Constants.Drive.MAX_VELOCITY_STABLE
             && drivetrain.getPigeon2().getRoll().getValue().abs(BaseUnits.AngleUnit)
@@ -261,7 +294,6 @@ public class Drive2 extends SubsystemBase {
 	}
 
 	public boolean getStable() {
-        // TODO: implement this
 		ChassisSpeeds speeds = getState().Speeds;
 		return getPitchStable()
             && getRollStable()

@@ -1,0 +1,125 @@
+package frc.robot.subsystems.drive.commands;
+
+import com.ctre.phoenix6.swerve.SwerveRequest;
+
+import edu.wpi.first.math.Pair;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Twist2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.Constants;
+import frc.robot.Robot;
+import frc.robot.RobotState;
+import frc.robot.lib.control.ControlConstants.PIDFConstants;
+import frc.robot.lib.control.ControlConstants.ProfiledPIDFConstants;
+import frc.robot.lib.control.PIDVController;
+import frc.robot.lib.control.ProfiledPIDVController;
+import frc.robot.lib.util.Util;
+import frc.robot.subsystems.drive.Drive2;
+
+public class TeleopCommand extends Command {
+    public final Drive2 drive;
+
+    private double targetRotation;
+    private final ProfiledPIDVController thetaController;
+
+    private Pose2d currentPose;
+    private ChassisSpeeds currentSpeeds;
+
+    private static final Rotation2d[] SNAP_ANGLES = {
+        Rotation2d.fromDegrees(0),
+        Rotation2d.fromDegrees(90),
+        Rotation2d.fromDegrees(180),
+        Rotation2d.fromDegrees(-90)
+    };
+
+    public TeleopCommand() {
+        this(Drive2.getInstance(), Constants.Auto.ROTATION_CONSTANTS);
+    }
+    
+    /**
+     * A drive controller that works with 2 {@link PIDVController}s for translation and one {@link ProfiledPIDVController} for rotation.
+     * @param translationConstants The {@link PIDFConstants} for the translation of the robot.
+     * @param rotationConstants The {@link ProfiledPIDFConstants} for the rotation of the robot.
+     * @param accelConstant The acceleration feedforwards (useful for traversing sharp turns on a trajectory).
+     */
+    public TeleopCommand(Drive2 drive, ProfiledPIDFConstants rotationConstants) {
+        this.drive = drive;
+        targetRotation = drive.getState().Pose.getRotation().getRadians();
+        thetaController = new ProfiledPIDVController(rotationConstants);
+        thetaController.enableContinuousInput(-Math.PI, Math.PI);
+        addRequirements(drive);
+        setName("Teleop");
+    }
+
+    @Override
+    public void initialize() {
+        
+    }
+
+    @Override
+    public void execute() {
+        setRobotState(
+            drive.getState().Pose, ChassisSpeeds.fromRobotRelativeSpeeds(drive.getState().Speeds, drive.getState().Pose.getRotation()));
+        drive.setSwerveRequest(new SwerveRequest.ApplyFieldSpeeds().withSpeeds(calculateSpeeds(
+            Util.deadBand(Robot.controller.getRightX(), Constants.Controllers.DRIVER_DEADBAND))));
+    }
+
+    public void setRobotState(Pose2d pose, ChassisSpeeds speeds) {
+        this.currentPose = pose;
+        this.currentSpeeds = speeds;
+    }
+
+    public ChassisSpeeds calculateSpeeds(double targetRotationSpeed) {
+        targetRotation += targetRotationSpeed * Constants.DT;
+        thetaController.setTarget(targetRotation);
+        thetaController.setInput(
+            new Pair<Double, Double>(
+                currentPose.getRotation().getRadians(), currentSpeeds.omegaRadiansPerSecond));
+        thetaController.setFeedforward(targetRotationSpeed);
+
+        double rotation = thetaController.getOutput();
+
+        Translation2d translationVector = new Translation2d(
+            Robot.controller.getLeftX(),
+            Robot.controller.getLeftY());
+
+        if (translationVector.minus(new Translation2d()).getNorm() > Constants.Controllers.DRIVER_DEADBAND) {
+            Rotation2d angle = translationVector.getAngle();
+            angle = applyAngleSnapping(angle, Rotation2d.fromDegrees(10));
+
+            double magnitude = translationVector.getNorm();
+            translationVector = new Translation2d(magnitude, angle);
+        } else {
+            translationVector = new Translation2d();
+        }
+        return ChassisSpeeds.fromFieldRelativeSpeeds(
+            translationVector.getX() * Constants.Drive.MAX_SPEED,
+            translationVector.getY() * Constants.Drive.MAX_SPEED,
+            rotation,
+            currentPose.getRotation());
+    }
+
+    @Override
+    public boolean isFinished() {
+        return false;
+    }
+
+    @Override
+    public void end(boolean interrupted) {
+        drive.setSwerveRequest(new SwerveRequest.FieldCentric());
+    }
+
+    private Rotation2d applyAngleSnapping(Rotation2d angle, Rotation2d deadband) {
+        for (Rotation2d target : SNAP_ANGLES) {
+            double diff = Math.abs(angle.minus(target).getRadians());
+            if (diff < deadband.getRadians()) {
+                return target;
+            }
+        }
+        return angle;
+    }
+    
+}

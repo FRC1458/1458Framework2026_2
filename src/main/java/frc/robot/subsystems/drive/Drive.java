@@ -30,7 +30,7 @@ import frc.robot.lib.util.Conversions;
 import frc.robot.lib.util.Util;
 import frc.robot.subsystems.CancoderManager;
 import frc.robot.subsystems.TelemetryManager;
-import frc.robot.commands.TrajectoryCommand;
+import frc.robot.subsystems.drive.commands.TrajectoryCommand;
 public class Drive extends SubsystemBase {
     private static Drive driveInstance;
     public static Drive getInstance() {
@@ -164,7 +164,7 @@ public class Drive extends SubsystemBase {
     }
 
     public boolean isInterrupted() {  
-        return !Robot.isAuto && !Util.MathUtils.allCloseTo(
+        return !edu.wpi.first.wpilibj.RobotState.isAutonomous() && !Util.MathUtils.allCloseTo(
             new Double[] {
                 Robot.controller.getLeftX(), 
                 Robot.controller.getLeftY(), 

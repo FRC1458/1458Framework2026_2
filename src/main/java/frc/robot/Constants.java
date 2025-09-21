@@ -2,6 +2,7 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.DegreesPerSecond;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
+import static edu.wpi.first.units.Units.Seconds;
 
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.path.PathConstraints;
@@ -17,10 +18,12 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.units.AngularVelocityUnit;
 import edu.wpi.first.units.LinearVelocityUnit;
 import edu.wpi.first.units.Measure;
+import edu.wpi.first.units.TimeUnit;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.VoltageUnit;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.LinearVelocity;
+import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.units.measure.Velocity;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -107,6 +110,8 @@ public final class Constants {
 			Units.Centimeters.of(15.0).per(Units.Seconds);
 		public static final AngularVelocity kScoringRotationMaxSpeed =
 			Units.Degrees.of(7.0).per(Units.Seconds); // oh god
+
+        public static final Time POSE_RESET_PREVENTION_TIME = Seconds.of(0.15);
 
 		public static enum ModuleConstants {
 			/** Module 0 */
