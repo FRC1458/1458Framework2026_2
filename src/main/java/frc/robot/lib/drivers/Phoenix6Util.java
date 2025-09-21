@@ -28,7 +28,7 @@ public class Phoenix6Util {
             tries++;
         }
         if (code != StatusCode.OK) {
-            DriverStation.reportError("Failed to execute phoenix pro api call after " + numTries + " attempts", false);
+            DriverStation.reportError("Failed to execute phoenix pro api call after " + numTries + " attempts, status code " + code.getName() + " description: " + code.getDescription(), false);
             return false;
         }
         return true;

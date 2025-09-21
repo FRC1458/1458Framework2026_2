@@ -5,7 +5,7 @@ import edu.wpi.first.math.Pair;
 import edu.wpi.first.wpilibj.Timer;
 import frc.robot.lib.control.ControlConstants.*;
 
-public class PIDVController implements Controller<Pair<Double, Double>, Double> {
+public class PidvController implements Controller<Pair<Double, Double>, Double> {
     private final PIDFConstants constants;
 
     private double target = 0.0;
@@ -26,12 +26,12 @@ public class PIDVController implements Controller<Pair<Double, Double>, Double> 
      * where the derivative is replaced by accurate velocity measurements.
      * @param constants The {@link PIDFConstants}.
      */
-    public PIDVController(PIDFConstants constants) {
+    public PidvController(PIDFConstants constants) {
         this.constants = constants;
         timer.start();
     }
 
-    public PIDVController(PIDConstants constants) {
+    public PidvController(PIDConstants constants) {
         this(new PIDFConstants(constants));
     }
     /**

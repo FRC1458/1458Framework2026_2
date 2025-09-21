@@ -9,13 +9,14 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.lib.trajectory.RedTrajectory;
 import frc.robot.subsystems.drive.Drive;
 
-public class ExtendedTrajectoryCommand extends Command {
+public class ExtendedTrajectoryCommand extends TrajectoryCommand {
     private final Drive drive;
 	private final RedTrajectory trajectory;
 	private final List<Pair<Double, Command>> triggers;
 
 	@SafeVarargs
 	public ExtendedTrajectoryCommand(Drive drive, RedTrajectory trajectory, Pair<Double, Command>... triggers) {
+		super(trajectory);
 		this.drive = drive;
 		this.trajectory = trajectory;
 		
@@ -25,14 +26,6 @@ public class ExtendedTrajectoryCommand extends Command {
 			new Trigger(() -> trajectory.progress > trigger.getFirst()).onTrue(trigger.getSecond());
 		}
 	}
-
-	@Override
-	public void initialize() {
-		drive.trajectoryCommand(trajectory).schedule();
-	}
-
-	@Override
-	public void execute() {}
 
 	@Override
 	public void end(boolean interrupted) {
@@ -47,6 +40,6 @@ public class ExtendedTrajectoryCommand extends Command {
 
 	@Override
 	public boolean isFinished() {
-		return trajectory.isDone();
+		return super.isFinished();
 	}
 }

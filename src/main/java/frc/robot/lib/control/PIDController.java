@@ -4,7 +4,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.Timer;
 import frc.robot.lib.control.ControlConstants.*;
 
-public class PIDController implements Controller<Double, Double> {
+public class PidController implements Controller<Double, Double> {
     private final PIDFConstants constants;
 
     private double target = 0.0;
@@ -25,7 +25,7 @@ public class PIDController implements Controller<Double, Double> {
      * A PID(F) controller. It works by acting like a dampened string, pulling the output towards a target point.
      * @param constants The {@link PIDFConstants}.
      */
-    public PIDController(PIDFConstants constants) {
+    public PidController(PIDFConstants constants) {
         this.constants = constants;
         timer.start();
     }
@@ -33,7 +33,7 @@ public class PIDController implements Controller<Double, Double> {
      * A PID controller. It works by acting like a dampened string, pulling the output towards a target point.
      * @param constants The {@link PIDConstants}.
      */
-    public PIDController(PIDConstants constants) {
+    public PidController(PIDConstants constants) {
         this(new PIDFConstants(constants));
     }
     /**
