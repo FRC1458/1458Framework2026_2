@@ -99,16 +99,15 @@ public class Drive extends SubsystemBase {
             .handleInterrupt(() -> setSwerveRequest(new SwerveRequest.FieldCentric()));
 	}
 
-    @Deprecated(since = "i added the teleopcommand class")
     public Command teleopCommand() {
         return run(() -> {
             setSwerveRequest(new SwerveRequest.FieldCentric()
                 .withVelocityX(
-                    Util.deadBand(Robot.controller.getLeftX() * Constants.Drive.MAX_SPEED, Constants.Controllers.DRIVER_DEADBAND))
+                    Util.deadBand(-Robot.controller.getLeftY(), Constants.Controllers.DRIVER_DEADBAND) * Constants.Drive.MAX_SPEED)
                 .withVelocityY(
-                    Util.deadBand(Robot.controller.getLeftY() * Constants.Drive.MAX_SPEED, Constants.Controllers.DRIVER_DEADBAND))
+                    Util.deadBand(Robot.controller.getLeftX(), Constants.Controllers.DRIVER_DEADBAND) * Constants.Drive.MAX_SPEED)
                 .withRotationalRate(
-                    Util.deadBand(Robot.controller.getRightX() * Constants.Drive.MAX_ROTATION_SPEED, Constants.Controllers.DRIVER_DEADBAND)));
+                    Util.deadBand(Robot.controller.getRightX(), Constants.Controllers.DRIVER_DEADBAND) * Constants.Drive.MAX_ROTATION_SPEED));
         });
     }
 
@@ -152,7 +151,6 @@ public class Drive extends SubsystemBase {
                 .lte(Constants.Drive.kScoringTranslationMaxSpeed)
             && Units.RadiansPerSecond.of(speeds.omegaRadiansPerSecond).lte(Constants.Drive.kScoringRotationMaxSpeed);
 	}
-
 
 	@Override
 	public void initSendable(SendableBuilder builder) {

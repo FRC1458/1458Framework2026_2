@@ -2,8 +2,6 @@ package frc.robot.subsystems.drive.commands;
 
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
-import edu.wpi.first.math.Pair;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -23,17 +21,13 @@ import frc.robot.subsystems.drive.Drive;
  * <ul>
  * <li>Sets speeds from controller</li>
  * <li>Snap to 90 degree angles when moving</li>
- * <li>Rotation adjustments when moving</li>
  * </ul>
  */
 public class TeleopCommand extends Command {
     public final Drive drive;
 
-    private double targetRotation;
-    private final ProfiledPIDVController thetaController;
 
-    private Pose2d currentPose;
-    private ChassisSpeeds currentSpeeds;
+    private SwerveRequest.FieldCentric request = new SwerveRequest.FieldCentric();
 
     private static final Rotation2d[] SNAP_ANGLES = {
         Rotation2d.fromDegrees(0),
@@ -43,7 +37,7 @@ public class TeleopCommand extends Command {
     };
 
     public TeleopCommand() {
-        this(Drive.getInstance(), Constants.Auto.ROTATION_CONSTANTS);
+        this(Drive.getInstance());
     }
     
     /**
@@ -52,11 +46,8 @@ public class TeleopCommand extends Command {
      * @param rotationConstants The {@link ProfiledPIDFConstants} for the rotation of the robot.
      * @param accelConstant The acceleration feedforwards (useful for traversing sharp turns on a trajectory).
      */
-    public TeleopCommand(Drive drive, ProfiledPIDFConstants rotationConstants) {
+    public TeleopCommand(Drive drive) {
         this.drive = drive;
-        targetRotation = drive.getState().Pose.getRotation().getRadians();
-        thetaController = new ProfiledPIDVController(rotationConstants);
-        thetaController.enableContinuousInput(-Math.PI, Math.PI);
         addRequirements(drive);
         setName("Teleop");
     }
@@ -68,32 +59,19 @@ public class TeleopCommand extends Command {
 
     @Override
     public void execute() {
-        setRobotState(
-            drive.getState().Pose, ChassisSpeeds.fromRobotRelativeSpeeds(drive.getState().Speeds, drive.getState().Pose.getRotation()));
-        drive.setSwerveRequest(new SwerveRequest.ApplyFieldSpeeds().withSpeeds(calculateSpeeds()));
-    }
-
-    public void setRobotState(Pose2d pose, ChassisSpeeds speeds) {
-        this.currentPose = pose;
-        this.currentSpeeds = speeds;
+        var newSpeeds = calculateSpeeds();
+        drive.setSwerveRequest(
+            request.withVelocityX(newSpeeds.vxMetersPerSecond)
+            .withVelocityY(newSpeeds.vyMetersPerSecond)
+            .withRotationalRate(newSpeeds.omegaRadiansPerSecond));
     }
 
     public ChassisSpeeds calculateSpeeds() {
-        double rotation = 0;
-        if (!Util.MathUtils.inRange(Robot.controller.getRightX(), Constants.Controllers.DRIVER_DEADBAND)) {
-            rotation = Robot.controller.getRightX()
-                * Constants.Drive.MAX_ROTATION_SPEED;
-            double targetRotationSpeed = rotation;
-            // Rotation compensation step
-            targetRotation = drive.getPose().getRotation().getRadians() + Constants.DT * targetRotationSpeed;
-        } else {
-            thetaController.setTarget(targetRotation);
-            thetaController.setInput(
-                new Pair<Double, Double>(
-                    currentPose.getRotation().getRadians(), currentSpeeds.omegaRadiansPerSecond));
-
-            rotation = thetaController.getOutput();
-        }
+        double rotation = 
+            Util.deadBand(
+                Robot.controller.getRightX(), 
+                Constants.Controllers.DRIVER_DEADBAND) 
+            * Constants.Drive.MAX_ROTATION_SPEED;
 
         // Translation snapping step
         Translation2d translationVector = new Translation2d(
