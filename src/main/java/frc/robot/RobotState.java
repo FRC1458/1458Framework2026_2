@@ -17,7 +17,7 @@ import frc.robot.lib.util.MovingAverage;
 import frc.robot.lib.util.Util;
 import frc.robot.lib.util.interpolation.InterpolatingTreeMap;
 import frc.robot.lib.util.interpolation.InterpolationUtil;
-import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.drive.LegacyDrive;
 import edu.wpi.first.math.interpolation.InverseInterpolator;
 
 
@@ -123,7 +123,7 @@ public class RobotState {
 			mKalmanFilter.setXhat(1, fieldToOdom.getY());
 			mLatestVisionUpdate = Optional.ofNullable(update);
 
-			Drive.getInstance().setOdometry(new Pose2d(fieldToOdom, getLatestOdomToVehicle().getValue().getRotation()));
+			LegacyDrive.getInstance().setOdometry(new Pose2d(fieldToOdom, getLatestOdomToVehicle().getValue().getRotation()));
 		} else {
 			double visionTimestamp = mLatestVisionUpdate.get().mTimestamp;
 			mLastTimestamp = mLatestVisionUpdate.get().mTimestamp;

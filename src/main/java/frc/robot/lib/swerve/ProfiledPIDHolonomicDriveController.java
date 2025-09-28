@@ -62,7 +62,6 @@ public class ProfiledPIDHolonomicDriveController implements DriveController {
         setRobotState(current.getFirst(), current.getSecond());
     }
 
-    @Override
     public ChassisSpeeds getOutput() {
         if (trajectory == null || currentPose == null || currentSpeeds == null || trajectory.isDone()) {
             return new ChassisSpeeds();

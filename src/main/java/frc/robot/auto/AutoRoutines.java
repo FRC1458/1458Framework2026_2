@@ -4,7 +4,7 @@ import frc.robot.lib.trajectory.RedTrajectory;
 import frc.robot.lib.trajectory.TrajectoryLoader;
 import frc.robot.lib.trajectory.RedTrajectory.TrajectoryType;
 import frc.robot.subsystems.drive.commands.AutopilotCommand;
-import frc.robot.subsystems.drive.commands.TrajectoryCommand;
+import frc.robot.subsystems.drive.commands.LegacyTrajectoryCommand;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -15,7 +15,7 @@ public final class AutoRoutines {
 	public static Command driveAuto() {
 		RedTrajectory traj = TrajectoryLoader.loadAutoTrajectory(TrajectoryType.PATHPLANNER, 
 			"zisen").get();
-		return new TrajectoryCommand(traj);
+		return new LegacyTrajectoryCommand(traj);
 	}
 
 	public static Command autopilotAuto() {

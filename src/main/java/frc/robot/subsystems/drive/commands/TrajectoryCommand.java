@@ -1,5 +1,7 @@
 package frc.robot.subsystems.drive.commands;
 
+import com.ctre.phoenix6.swerve.SwerveRequest;
+
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -18,6 +20,9 @@ import frc.robot.lib.control.ProfiledPIDVController;
 import frc.robot.lib.trajectory.RedTrajectory;
 import frc.robot.subsystems.drive.Drive;
 
+/**
+ * Command that follows a trajectory
+ */
 public class TrajectoryCommand extends Command {
     public final Drive drive;
 
@@ -38,15 +43,12 @@ public class TrajectoryCommand extends Command {
     }
 
     public TrajectoryCommand(RedTrajectory trajectory) {
-        this.drive = Drive.getInstance();
-        this.trajectory = trajectory;
-        this.xController = new PIDVController(Constants.Auto.TRANSLATION_CONSTANTS);
-        this.yController = new PIDVController(Constants.Auto.TRANSLATION_CONSTANTS);
-        thetaController = new ProfiledPIDVController(Constants.Auto.ROTATION_CONSTANTS);
-        thetaController.enableContinuousInput(-Math.PI, Math.PI);
-        this.accelConstant = Constants.Auto.ACCELERATION_CONSTANT;
-
-        timer = new Timer();
+        this(
+            Drive.getInstance(), 
+            trajectory, 
+            Constants.Auto.TRANSLATION_CONSTANTS, 
+            Constants.Auto.ROTATION_CONSTANTS, 
+            Constants.Auto.ACCELERATION_CONSTANT);
     }
     
     /**
@@ -78,7 +80,7 @@ public class TrajectoryCommand extends Command {
     public void execute() {
         setRobotState(
             RobotState.getLatestFieldToVehicle(), RobotState.getSmoothedVelocity());
-        drive.setTargetSpeeds(calculateSpeeds());
+        drive.setSwerveRequest(new SwerveRequest.ApplyFieldSpeeds().withSpeeds(calculateSpeeds()));
     }
 
     public void setRobotState(Pose2d pose, Twist2d speeds) {

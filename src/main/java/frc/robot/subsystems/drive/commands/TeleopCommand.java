@@ -6,21 +6,28 @@ import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
 import frc.robot.Robot;
-import frc.robot.RobotState;
 import frc.robot.lib.control.ControlConstants.PIDFConstants;
 import frc.robot.lib.control.ControlConstants.ProfiledPIDFConstants;
 import frc.robot.lib.control.PIDVController;
 import frc.robot.lib.control.ProfiledPIDVController;
 import frc.robot.lib.util.Util;
-import frc.robot.subsystems.drive.Drive2;
+import frc.robot.subsystems.drive.Drive;
 
+/**
+ * <p>Default command for the drivetrain in teleop.</p>
+ * <p>Features:</p>
+ * <ul>
+ * <li>Sets speeds from controller</li>
+ * <li>Snap to 90 degree angles when moving</li>
+ * <li>Rotation adjustments when moving</li>
+ * </ul>
+ */
 public class TeleopCommand extends Command {
-    public final Drive2 drive;
+    public final Drive drive;
 
     private double targetRotation;
     private final ProfiledPIDVController thetaController;
@@ -36,7 +43,7 @@ public class TeleopCommand extends Command {
     };
 
     public TeleopCommand() {
-        this(Drive2.getInstance(), Constants.Auto.ROTATION_CONSTANTS);
+        this(Drive.getInstance(), Constants.Auto.ROTATION_CONSTANTS);
     }
     
     /**
@@ -45,7 +52,7 @@ public class TeleopCommand extends Command {
      * @param rotationConstants The {@link ProfiledPIDFConstants} for the rotation of the robot.
      * @param accelConstant The acceleration feedforwards (useful for traversing sharp turns on a trajectory).
      */
-    public TeleopCommand(Drive2 drive, ProfiledPIDFConstants rotationConstants) {
+    public TeleopCommand(Drive drive, ProfiledPIDFConstants rotationConstants) {
         this.drive = drive;
         targetRotation = drive.getState().Pose.getRotation().getRadians();
         thetaController = new ProfiledPIDVController(rotationConstants);
@@ -64,7 +71,7 @@ public class TeleopCommand extends Command {
         setRobotState(
             drive.getState().Pose, ChassisSpeeds.fromRobotRelativeSpeeds(drive.getState().Speeds, drive.getState().Pose.getRotation()));
         drive.setSwerveRequest(new SwerveRequest.ApplyFieldSpeeds().withSpeeds(calculateSpeeds(
-            Util.deadBand(Robot.controller.getRightX(), Constants.Controllers.DRIVER_DEADBAND))));
+            Util.deadBand(Robot.controller.getRightX() * Constants.Drive.MAX_ROTATION_SPEED, Constants.Controllers.DRIVER_DEADBAND))));
     }
 
     public void setRobotState(Pose2d pose, ChassisSpeeds speeds) {
@@ -73,6 +80,7 @@ public class TeleopCommand extends Command {
     }
 
     public ChassisSpeeds calculateSpeeds(double targetRotationSpeed) {
+        // Rotation compensation step
         targetRotation += targetRotationSpeed * Constants.DT;
         thetaController.setTarget(targetRotation);
         thetaController.setInput(
@@ -82,6 +90,7 @@ public class TeleopCommand extends Command {
 
         double rotation = thetaController.getOutput();
 
+        // Translation snapping step
         Translation2d translationVector = new Translation2d(
             Robot.controller.getLeftX(),
             Robot.controller.getLeftY());
@@ -95,11 +104,10 @@ public class TeleopCommand extends Command {
         } else {
             translationVector = new Translation2d();
         }
-        return ChassisSpeeds.fromFieldRelativeSpeeds(
+        return new ChassisSpeeds(
             translationVector.getX() * Constants.Drive.MAX_SPEED,
             translationVector.getY() * Constants.Drive.MAX_SPEED,
-            rotation,
-            currentPose.getRotation());
+            rotation);
     }
 
     @Override
@@ -121,5 +129,4 @@ public class TeleopCommand extends Command {
         }
         return angle;
     }
-    
 }

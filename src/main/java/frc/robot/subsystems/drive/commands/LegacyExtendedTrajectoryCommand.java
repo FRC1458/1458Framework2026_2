@@ -7,21 +7,20 @@ import edu.wpi.first.math.Pair;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.lib.trajectory.RedTrajectory;
-import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.drive.LegacyDrive;
 
-public class ExtendedTrajectoryCommand extends TrajectoryCommand {
+@Deprecated
+public class LegacyExtendedTrajectoryCommand extends LegacyTrajectoryCommand {
 	private final List<Pair<Double, Command>> triggers;
 
 	@SafeVarargs
-	public ExtendedTrajectoryCommand(Drive drive, RedTrajectory trajectory, Pair<Double, Command>... triggers) {
+	public LegacyExtendedTrajectoryCommand(LegacyDrive drive, RedTrajectory trajectory, Pair<Double, Command>... triggers) {
 		super(trajectory);
 		
 		addRequirements(drive);
-		setName("Extended Trajectory Command");
 		this.triggers = new ArrayList<>(List.of(triggers));
 		for (Pair<Double,Command> trigger : triggers) {
 			new Trigger(() -> trajectory.progress > trigger.getFirst()).onTrue(trigger.getSecond());
-			addRequirements(trigger.getSecond().getRequirements());
 		}
 	}
 

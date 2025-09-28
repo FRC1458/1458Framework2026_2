@@ -23,7 +23,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 
-import frc.robot.subsystems.drive.ctre.CtreConstants.TunerSwerveDrivetrain;
+import frc.robot.subsystems.drive.ctre.CtreDriveConstants.TunerSwerveDrivetrain;
 
 /**
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
@@ -40,6 +40,12 @@ public class CtreDrive extends TunerSwerveDrivetrain implements Subsystem {
     private static final Rotation2d kRedAlliancePerspectiveRotation = Rotation2d.k180deg;
     /* Keep track if we've ever applied the operator perspective before or not */
     private boolean m_hasAppliedOperatorPerspective = false;
+
+    public static enum SysIdRoutineType {
+        TRANSLATION,
+        STEER,
+        ROTATION
+    }
 
     /* Swerve requests to apply during SysId characterization */
     private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
@@ -192,6 +198,26 @@ public class CtreDrive extends TunerSwerveDrivetrain implements Subsystem {
      */
     public Command applyRequest(Supplier<SwerveRequest> requestSupplier) {
         return run(() -> this.setControl(requestSupplier.get()));
+    }
+
+    /**
+     * Sets the sysid routine to run
+     * @param type
+     */
+    public void setSysIdRoutine(SysIdRoutineType type) {
+        switch(type) {
+            case ROTATION:
+                m_sysIdRoutineToApply = m_sysIdRoutineRotation;
+                break;
+            case STEER:
+                m_sysIdRoutineToApply = m_sysIdRoutineSteer;
+                break;
+            case TRANSLATION:
+                m_sysIdRoutineToApply = m_sysIdRoutineTranslation;
+                break;
+            default:
+                break;
+        }
     }
 
     /**

@@ -1,7 +1,5 @@
 package frc.robot.subsystems.drive.commands;
 
-import com.ctre.phoenix6.swerve.SwerveRequest;
-
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -18,10 +16,11 @@ import frc.robot.lib.control.ControlConstants.ProfiledPIDFConstants;
 import frc.robot.lib.control.PIDVController;
 import frc.robot.lib.control.ProfiledPIDVController;
 import frc.robot.lib.trajectory.RedTrajectory;
-import frc.robot.subsystems.drive.Drive2;
+import frc.robot.subsystems.drive.LegacyDrive;
 
-public class TrajectoryCommand2 extends Command {
-    public final Drive2 drive;
+@Deprecated
+public class LegacyTrajectoryCommand extends Command {
+    public final LegacyDrive drive;
 
     private final PIDVController xController;
     private final PIDVController yController;
@@ -39,13 +38,16 @@ public class TrajectoryCommand2 extends Command {
 		SmartDashboard.putData("debug", field);
     }
 
-    public TrajectoryCommand2(RedTrajectory trajectory) {
-        this(
-            Drive2.getInstance(), 
-            trajectory, 
-            Constants.Auto.TRANSLATION_CONSTANTS, 
-            Constants.Auto.ROTATION_CONSTANTS, 
-            Constants.Auto.ACCELERATION_CONSTANT);
+    public LegacyTrajectoryCommand(RedTrajectory trajectory) {
+        this.drive = LegacyDrive.getInstance();
+        this.trajectory = trajectory;
+        this.xController = new PIDVController(Constants.Auto.TRANSLATION_CONSTANTS);
+        this.yController = new PIDVController(Constants.Auto.TRANSLATION_CONSTANTS);
+        thetaController = new ProfiledPIDVController(Constants.Auto.ROTATION_CONSTANTS);
+        thetaController.enableContinuousInput(-Math.PI, Math.PI);
+        this.accelConstant = Constants.Auto.ACCELERATION_CONSTANT;
+
+        timer = new Timer();
     }
     
     /**
@@ -54,7 +56,7 @@ public class TrajectoryCommand2 extends Command {
      * @param rotationConstants The {@link ProfiledPIDFConstants} for the rotation of the robot.
      * @param accelConstant The acceleration feedforwards (useful for traversing sharp turns on a trajectory).
      */
-    public TrajectoryCommand2(Drive2 drive, RedTrajectory trajectory, PIDFConstants translationConstants, ProfiledPIDFConstants rotationConstants, double accelConstant) {
+    public LegacyTrajectoryCommand(LegacyDrive drive, RedTrajectory trajectory, PIDFConstants translationConstants, ProfiledPIDFConstants rotationConstants, double accelConstant) {
         this.drive = drive;
         this.trajectory = trajectory;
         xController = new PIDVController(translationConstants);
@@ -77,7 +79,7 @@ public class TrajectoryCommand2 extends Command {
     public void execute() {
         setRobotState(
             RobotState.getLatestFieldToVehicle(), RobotState.getSmoothedVelocity());
-        drive.setSwerveRequest(new SwerveRequest.ApplyFieldSpeeds().withSpeeds(calculateSpeeds()));
+        drive.setTargetSpeeds(calculateSpeeds());
     }
 
     public void setRobotState(Pose2d pose, Twist2d speeds) {

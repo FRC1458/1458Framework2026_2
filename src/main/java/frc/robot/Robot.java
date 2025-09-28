@@ -43,7 +43,7 @@ public class Robot extends TimedRobot {
 		RobotState.reset(Timer.getFPGATimestamp(), new Pose2d());
 		RobotState.resetKalman();
 
-		Drive2.getInstance();
+		Drive.getInstance();
 		VisionDeviceManager.getInstance();
 		TelemetryManager.getInstance();
 
@@ -108,10 +108,7 @@ public class Robot extends TimedRobot {
 			autoCommand.cancel();
 		}
 
-		// controller.b().onTrue(Drive.getInstance().driveToPoseCommand(
-		// 	new Pose2d(5.0, 5.0, Rotation2d.fromDegrees(80))));
-		Drive2.getInstance().setDefaultCommand(new TeleopCommand());
-		// Drive2.getInstance().setDefaultCommand(Drive2.getInstance().teleopCommand());
+		ControlsMapping.map1();
 	}
 
 	/** This function is called periodically during operator control. */

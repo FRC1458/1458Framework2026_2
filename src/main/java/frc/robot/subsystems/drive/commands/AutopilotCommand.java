@@ -16,10 +16,15 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
 import frc.robot.lib.control.ProfiledPIDVController;
 import frc.robot.lib.control.ControlConstants.ProfiledPIDFConstants;
-import frc.robot.subsystems.drive.Drive2;
+import frc.robot.subsystems.drive.Drive;
 
+/**
+ * I've tried this enough times according to the documents
+ * I don't think we need this anymore.
+ */
+@Deprecated
 public class AutopilotCommand extends Command {
-    public final Drive2 drive;
+    public final Drive drive;
     private static final APConstraints kConstraints = new APConstraints()
         .withAcceleration(5.0)
         .withJerk(2.0);
@@ -33,10 +38,10 @@ public class AutopilotCommand extends Command {
     private final ProfiledPIDVController thetaController;
 
     public AutopilotCommand(Pose2d target) {
-        this(Drive2.getInstance(), new APTarget(target), Constants.Auto.ROTATION_CONSTANTS);
+        this(Drive.getInstance(), new APTarget(target), Constants.Auto.ROTATION_CONSTANTS);
     }
 
-    public AutopilotCommand(Drive2 drive, APTarget target, ProfiledPIDFConstants rotationConstants) {
+    public AutopilotCommand(Drive drive, APTarget target, ProfiledPIDFConstants rotationConstants) {
         this.drive = drive;
         this.target = target;
         thetaController = new ProfiledPIDVController(rotationConstants);
@@ -45,6 +50,7 @@ public class AutopilotCommand extends Command {
         setName("Autopilot to " + target.getReference().toString());
     }
 
+    @Override
     public void execute() {
         ChassisSpeeds robotRelativeSpeeds = drive.getState().Speeds;
         Pose2d pose = drive.getState().Pose;
@@ -64,16 +70,18 @@ public class AutopilotCommand extends Command {
 
         double rotation = thetaController.getOutput();
 
-        drive.setSwerveRequest(new SwerveRequest.FieldCentric()
+        drive.setSwerveRequest(new SwerveRequest.RobotCentric()
             .withVelocityX(veloX)
             .withVelocityY(veloY)
-            .withRotationalRate(veloY));
+            .withRotationalRate(rotation));
     }
 
+    @Override
     public boolean isFinished() {
         return kAutopilot.atTarget(drive.getState().Pose, target);
     }
 
+    @Override
     public void end(boolean interrupted) {
         drive.setSwerveRequest(new SwerveRequest.FieldCentric());
     }

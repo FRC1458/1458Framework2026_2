@@ -5,7 +5,7 @@ import edu.wpi.first.math.Pair;
 import edu.wpi.first.wpilibj.Timer;
 import frc.robot.lib.control.ControlConstants.*;
 
-public class PIDVController implements Controller<Pair<Double, Double>, Double> {
+public class PIDVController {
     private final PIDFConstants constants;
 
     private double target = 0.0;
@@ -50,12 +50,10 @@ public class PIDVController implements Controller<Pair<Double, Double>, Double> 
         isContinuous = false;
     }
 
-    @Override
     public void setInput(Pair<Double, Double> input) {
         this.measurement = input;
     }
 
-    @Override
     public void setTarget(Double target) {
         this.target = target;
     }
@@ -65,7 +63,6 @@ public class PIDVController implements Controller<Pair<Double, Double>, Double> 
         this.feedforward = feedforward;
     }
 
-    @Override
     public Double getOutput() {
         double dt = timer.get();
         timer.reset();
