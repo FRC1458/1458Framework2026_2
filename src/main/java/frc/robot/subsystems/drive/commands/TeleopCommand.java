@@ -70,8 +70,7 @@ public class TeleopCommand extends Command {
     public void execute() {
         setRobotState(
             drive.getState().Pose, ChassisSpeeds.fromRobotRelativeSpeeds(drive.getState().Speeds, drive.getState().Pose.getRotation()));
-        drive.setSwerveRequest(new SwerveRequest.ApplyFieldSpeeds().withSpeeds(calculateSpeeds(
-            Util.deadBand(Robot.controller.getRightX() * Constants.Drive.MAX_ROTATION_SPEED, Constants.Controllers.DRIVER_DEADBAND))));
+        drive.setSwerveRequest(new SwerveRequest.ApplyFieldSpeeds().withSpeeds(calculateSpeeds()));
     }
 
     public void setRobotState(Pose2d pose, ChassisSpeeds speeds) {
@@ -79,16 +78,22 @@ public class TeleopCommand extends Command {
         this.currentSpeeds = speeds;
     }
 
-    public ChassisSpeeds calculateSpeeds(double targetRotationSpeed) {
-        // Rotation compensation step
-        targetRotation += targetRotationSpeed * Constants.DT;
-        thetaController.setTarget(targetRotation);
-        thetaController.setInput(
-            new Pair<Double, Double>(
-                currentPose.getRotation().getRadians(), currentSpeeds.omegaRadiansPerSecond));
-        thetaController.setFeedforward(targetRotationSpeed);
+    public ChassisSpeeds calculateSpeeds() {
+        double rotation = 0;
+        if (!Util.MathUtils.inRange(Robot.controller.getRightX(), Constants.Controllers.DRIVER_DEADBAND)) {
+            rotation = Robot.controller.getRightX()
+                * Constants.Drive.MAX_ROTATION_SPEED;
+            double targetRotationSpeed = rotation;
+            // Rotation compensation step
+            targetRotation = drive.getPose().getRotation().getRadians() + Constants.DT * targetRotationSpeed;
+        } else {
+            thetaController.setTarget(targetRotation);
+            thetaController.setInput(
+                new Pair<Double, Double>(
+                    currentPose.getRotation().getRadians(), currentSpeeds.omegaRadiansPerSecond));
 
-        double rotation = thetaController.getOutput();
+            rotation = thetaController.getOutput();
+        }
 
         // Translation snapping step
         Translation2d translationVector = new Translation2d(
@@ -105,8 +110,8 @@ public class TeleopCommand extends Command {
             translationVector = new Translation2d();
         }
         return new ChassisSpeeds(
-            translationVector.getX() * Constants.Drive.MAX_SPEED,
             translationVector.getY() * Constants.Drive.MAX_SPEED,
+            translationVector.getX() * Constants.Drive.MAX_SPEED,
             rotation);
     }
 

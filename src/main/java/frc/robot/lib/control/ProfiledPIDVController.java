@@ -74,7 +74,6 @@ public class ProfiledPIDVController {
         integral += error * dt;
         double derivative = feedforward - velocity;
 
-
         return constants.kP * error
              + constants.kI * integral
              + constants.kD * derivative

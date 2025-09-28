@@ -71,8 +71,8 @@ public final class Constants {
 		public static final double DRIVE_GEAR_RATIO = SWERVE_MODULE_TYPE.driveGearRatio;
         public static final double ANGLE_GEAR_RATIO = SWERVE_MODULE_TYPE.angleGearRatio;
 
-		public static final double MAX_SPEED = 2.0;
-		public static final double MAX_ACCEL = 3.0;
+		public static final double MAX_SPEED = 5.0;
+		public static final double MAX_ACCEL = 5.0;
 		public static final double MAX_ROTATION_SPEED = DegreesPerSecond.of(540.0).in(RadiansPerSecond);
 		public static final double MAX_ROTATION_ACCEL = DegreesPerSecond.of(2880.0).in(RadiansPerSecond);
 
