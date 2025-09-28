@@ -14,6 +14,7 @@ import frc.robot.lib.control.PIDVController;
 import frc.robot.lib.control.ProfiledPIDVController;
 import frc.robot.lib.trajectory.RedTrajectory;
 
+@Deprecated
 public class PIDHolonomicDriveController implements DriveController {
     private final PIDVController xController;
     private final PIDVController yController;

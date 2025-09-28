@@ -1,15 +1,12 @@
 package frc.robot.lib.swerve;
 
-import edu.wpi.first.math.Pair;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Twist2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import frc.robot.lib.trajectory.RedTrajectory;
 
 /**
  * An interface for a drive controller which traverses a trajectory. 
  * It takes the current speed and position and returns the calculated {@code ChassisSpeeds}.
  */
+@Deprecated
 public interface DriveController {
     /**
      * Sets the trajectory.
