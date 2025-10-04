@@ -110,20 +110,24 @@ public class Util {
 		return newAngle;
 	}
 
-	/**
-	 * Applies a deadband to a specified value
-	 * @param val the value to deadband
-	 * @param deadband the deadband threshold
-	 * @return the deadbanded value
-	 */
-	public static double deadBand(double val, double deadband) {
-		return (Math.abs(val) > Math.abs(deadband)) ? val : 0.0;
-	}
+	// /**
+	//  * Applies a deadband to a specified value
+	//  * @param val the value to deadband
+	//  * @param deadband the deadband threshold
+	//  * @return the deadbanded value
+	//  */
+	// public static double deadBand(double val, double deadband) {
+	// 	return (Math.abs(val) > Math.abs(deadband)) ? val : 0.0;
+	// }
 
-	public static double scaledDeadband(double value, double maxValue, double deadband) {
-		double deadbandedValue = deadBand(value, deadband);
+	//
+	// dc 10.4.25, this function works in joystick space [-1,1]
+	//  * Applies a deadband to a joystick input value
+	//
+	public static double applyJoystickDeadband(double stickValue, double stickDeadband) {
+		double deadbandedValue = (Math.abs(stickValue) > Math.abs(stickDeadband)) ? stickValue : 0.0;
 		if (MathUtils.epsilonEquals(deadbandedValue, 0.0)) return 0.0;
-		return Math.signum(deadbandedValue) * ((Math.abs(deadbandedValue) - deadband) / (maxValue - deadband));
+		return Math.signum(deadbandedValue) * ((Math.abs(deadbandedValue) - stickDeadband) / (1.0 - stickDeadband)); //joystick max is always 1.0
 	}
 
 	public static Rotation2d robotToFieldRelative(Rotation2d rot, boolean is_red_alliance) {
