@@ -41,8 +41,8 @@ public class Drive extends SubsystemBase {
     }
 
 	private SwerveDriveState lastReadState;
-	private SwerveRequest driveRequest =
-        new SwerveRequest.FieldCentric().withDriveRequestType(DriveRequestType.OpenLoopVoltage);
+	public SwerveRequest.FieldCentric driveRequest =
+        new SwerveRequest.FieldCentric().withVelocityX(0).withVelocityY(0).withDriveRequestType(DriveRequestType.OpenLoopVoltage);
 	private final CtreDrive drivetrain = CtreDriveConstants.createDrivetrain();
 	private final CtreDriveTelemetry telemetry = new CtreDriveTelemetry(Constants.Drive.MAX_SPEED);
     // Citrus what are you doing
@@ -89,25 +89,37 @@ public class Drive extends SubsystemBase {
 		return lastReadState.Pose;
 	}
 
-	public void setSwerveRequest(SwerveRequest request) {
-		driveRequest = request;
+	// public void setSwerveRequest(SwerveRequest request) {
+	// 	driveRequest = request;
+	// }
+
+    public SwerveRequest getSwerveRequest() {
+		return driveRequest; 
 	}
 
-	public Command followSwerveRequestCommand(
-			SwerveRequest.FieldCentric request, UnaryOperator<SwerveRequest.FieldCentric> updater) {
-		return run(() -> setSwerveRequest(updater.apply(request)))
-            .handleInterrupt(() -> setSwerveRequest(new SwerveRequest.FieldCentric()));
-	}
+
+	// public Command followSwerveRequestCommand(
+	// 		SwerveRequest.FieldCentric request, UnaryOperator<SwerveRequest.FieldCentric> updater) {
+	// 	return run(() -> setSwerveRequest(updater.apply(request)))
+    //         .handleInterrupt(() -> setSwerveRequest(new SwerveRequest.FieldCentric()));
+	// }
 
     public Command teleopCommand() {
         return run(() -> {
-            setSwerveRequest(new SwerveRequest.FieldCentric()
+            System.out.println("teleopCommand.run() vx=" + Robot.controller.getLeftX() + ", vy = " + Robot.controller.getLeftY() + ", vw=" + Robot.controller.getRightX());
+            // setSwerveRequest(new SwerveRequest.FieldCentric()
+            //     .withVelocityX(Robot.controller.getLeftX()* Constants.Drive.MAX_SPEED)
+            //     .withVelocityY(Robot.controller.getLeftY()* Constants.Drive.MAX_SPEED)
+            //     .withRotationalRate(Robot.controller.getRightX()* Constants.Drive.MAX_ROTATION_SPEED));
+            // });
+//            setSwerveRequest(new SwerveRequest.FieldCentric()
+            driveRequest
                 .withVelocityX(
-                    Util.deadBand(-Robot.controller.getLeftY(), Constants.Controllers.DRIVER_DEADBAND) * Constants.Drive.MAX_SPEED)
+                    Robot.controller.getLeftY() * Constants.Drive.MAX_SPEED)
                 .withVelocityY(
-                    Util.deadBand(Robot.controller.getLeftX(), Constants.Controllers.DRIVER_DEADBAND) * Constants.Drive.MAX_SPEED)
+                    Robot.controller.getLeftX() * Constants.Drive.MAX_SPEED)
                 .withRotationalRate(
-                    Util.deadBand(Robot.controller.getRightX(), Constants.Controllers.DRIVER_DEADBAND) * Constants.Drive.MAX_ROTATION_SPEED));
+                    Robot.controller.getRightX() * Constants.Drive.MAX_ROTATION_SPEED);
         });
     }
 

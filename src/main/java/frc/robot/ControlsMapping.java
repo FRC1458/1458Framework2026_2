@@ -8,7 +8,7 @@ import frc.robot.subsystems.drive.commands.TeleopCommand;
 import frc.robot.subsystems.drive.ctre.CtreDrive.SysIdRoutineType;
 
 public class ControlsMapping {
-	public static void map1() {
+	public static void mapTeleopCommand() {
 		Drive.getInstance().setDefaultCommand((Drive.getInstance().teleopCommand()));
 		Drive.getInstance().getCtreDrive().setSysIdRoutine(SysIdRoutineType.STEER);
 		controller.a().onTrue(

@@ -37,7 +37,7 @@ public final class Constants {
 
 	public static final class Controllers {
 		public static final int DRIVER_CONTROLLER_PORT = 0;
-		public static final double DRIVER_DEADBAND = 0.07;
+		public static final double DRIVER_DEADBAND = 0.03;
 	}
 
 	public static final class Odometry {

@@ -108,7 +108,7 @@ public class Robot extends TimedRobot {
 			autoCommand.cancel();
 		}
 
-		ControlsMapping.map1();
+		ControlsMapping.mapTeleopCommand();
 	}
 
 	/** This function is called periodically during operator control. */
