@@ -41,9 +41,11 @@ public class Drive extends SubsystemBase {
     }
 
 	private SwerveDriveState lastReadState;
-	public SwerveRequest.FieldCentric driveRequest =
-        new SwerveRequest.FieldCentric().withVelocityX(0).withVelocityY(0).withDriveRequestType(DriveRequestType.OpenLoopVoltage);
-	private final CtreDrive drivetrain = CtreDriveConstants.createDrivetrain();
+    public static final SwerveRequest.FieldCentric teleopRequest =
+        new SwerveRequest.FieldCentric().withDriveRequestType(DriveRequestType.OpenLoopVoltage);    //dc.10.4.25, this is the actual SwerveRequest (FieldCentric type) updated from joystick input in each 20 cycle
+	public SwerveRequest driveRequest = teleopRequest; //dc.10.4.25, reference to current SwerveRequest in use by drivetrain, its value will be applied to motors via drivetrain default command
+
+    private final CtreDrive drivetrain = CtreDriveConstants.createDrivetrain();    
 	private final CtreDriveTelemetry telemetry = new CtreDriveTelemetry(Constants.Drive.MAX_SPEED);
     // Citrus what are you doing
 	private Time lastPoseResetTime = BaseUnits.TimeUnit.of(0.0);
@@ -89,9 +91,14 @@ public class Drive extends SubsystemBase {
 		return lastReadState.Pose;
 	}
 
-	// public void setSwerveRequest(SwerveRequest request) {
-	// 	driveRequest = request;
-	// }
+	//
+    // dc 10.4.25, switch the current SwerveRequest to be used by drivetrain between different commands, 
+    // input a reference to a predefined SwerveRequest object (e.g. teleopRequest) or a new SwerveRequest object when mode 
+    // please do NOT new up a SwerveRequest object every 20ms cycle, that will cause memory leak and eventually crash
+    //
+    public void setSwerveRequest(SwerveRequest request) {
+	 	driveRequest = request;
+	}
 
     public SwerveRequest getSwerveRequest() {
 		return driveRequest; 
@@ -104,23 +111,25 @@ public class Drive extends SubsystemBase {
     //         .handleInterrupt(() -> setSwerveRequest(new SwerveRequest.FieldCentric()));
 	// }
 
-    public Command teleopCommand() {
+    public Command updateTeleopRequest() {
         return run(() -> {
-            System.out.println("teleopCommand.run() vx=" + Robot.controller.getLeftX() + ", vy = " + Robot.controller.getLeftY() + ", vw=" + Robot.controller.getRightX());
-            // setSwerveRequest(new SwerveRequest.FieldCentric()
-            //     .withVelocityX(Robot.controller.getLeftX()* Constants.Drive.MAX_SPEED)
-            //     .withVelocityY(Robot.controller.getLeftY()* Constants.Drive.MAX_SPEED)
-            //     .withRotationalRate(Robot.controller.getRightX()* Constants.Drive.MAX_ROTATION_SPEED));
-            // });
-//            setSwerveRequest(new SwerveRequest.FieldCentric()
-            driveRequest
-                .withVelocityX(
-                    Robot.controller.getLeftY() * Constants.Drive.MAX_SPEED)
-                .withVelocityY(
-                    Robot.controller.getLeftX() * Constants.Drive.MAX_SPEED)
-                .withRotationalRate(
-                    Robot.controller.getRightX() * Constants.Drive.MAX_ROTATION_SPEED);
-        });
+                            double xDesiredRaw = Robot.controller.getLeftY();
+                            double yDesiredRaw = Robot.controller.getLeftX();
+                            double rotDesiredRaw = Robot.controller.getRightX();
+                            double xFancy = Util.applyJoystickDeadband(xDesiredRaw, Constants.Controllers.DRIVER_DEADBAND);
+                            double yFancy = Util.applyJoystickDeadband(yDesiredRaw, Constants.Controllers.DRIVER_DEADBAND);
+                            double rotFancy = Util.applyJoystickDeadband(rotDesiredRaw, Constants.Controllers.DRIVER_DEADBAND);
+
+                            SmartDashboard.putNumber("Sticks/vX", xDesiredRaw);
+                            SmartDashboard.putNumber("Sticks/vY", yDesiredRaw);
+                            SmartDashboard.putNumber("Sticks/vW", rotDesiredRaw);
+
+                            teleopRequest
+                                .withVelocityX(xFancy* Constants.Drive.MAX_SPEED)
+                                .withVelocityY(yFancy* Constants.Drive.MAX_SPEED)
+                                .withRotationalRate(rotFancy*Constants.Drive.MAX_ROTATION_SPEED);        
+                        }
+                ).handleInterrupt(() -> setSwerveRequest(new SwerveRequest.FieldCentric()));
     }
 
 	public void addVisionUpdate(Pose2d pose, Time timestamp) {
