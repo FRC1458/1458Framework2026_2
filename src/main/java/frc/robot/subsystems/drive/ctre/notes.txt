@@ -1,0 +1,6 @@
+A list 2025 codebase using CTRE drivetrain 
+- Citrus(1678) : clean generated TunerSwerveDrivetrain code based on CTRE , sophisticated architecture. 
+- BlazingBulldogs (581): clean generated TunerSwerveDrivetrain code based on CTRE , easy to understand framework. 
+- NoMad (6995) : clean generated TunerSwerveDrivetrain code based on CTRE , simple architecture. 
+- Bobcat : only use CTRE generated constants, drivetrain code is built from scratch. 
+- Cheesy : focusing on detail implementation of CTRE framework, lots of code to understand. 
