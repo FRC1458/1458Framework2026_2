@@ -14,8 +14,10 @@ public class AutoSelector {
 
     public AutoSelector() {
         chooser.setDefaultOption("None", () -> null);
-        chooser.addOption("TrajectoryTest", () -> AutoRoutines.driveAuto());
-        chooser.addOption("AutopilotTest", () -> AutoRoutines.autopilotAuto());
+        chooser.addOption("SnapTest", () -> AutoRoutines.testSnap());
+        chooser.addOption("TrajectoryTest", () -> AutoRoutines.testTrajectoryAuto());
+        chooser.addOption("TrajectoryTestOld", () -> AutoRoutines.driveAuto());
+        chooser.addOption("AutopilotTestOld", () -> AutoRoutines.autopilotAuto());
         SmartDashboard.putData(chooser);
     }
 

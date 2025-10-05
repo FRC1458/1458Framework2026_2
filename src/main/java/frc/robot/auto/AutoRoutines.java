@@ -5,6 +5,7 @@ import frc.robot.lib.trajectory.TrajectoryLoader;
 import frc.robot.lib.trajectory.RedTrajectory.TrajectoryType;
 import frc.robot.subsystems.drive.commands.AutopilotCommand;
 import frc.robot.subsystems.drive.commands.LegacyTrajectoryCommand;
+import frc.robot.subsystems.drive.commands.SnapCommand;
 import frc.robot.subsystems.drive.commands.TrajectoryCommand;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -12,6 +13,9 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 
 public final class AutoRoutines {
+	public static Command testSnap() {
+		return new SnapCommand(new Pose2d(5, 5, Rotation2d.kCCW_Pi_2), Rotation2d.kCCW_Pi_2);
+	}
 	public static Command testTrajectoryAuto() {
 		RedTrajectory traj = TrajectoryLoader.loadAutoTrajectory(TrajectoryType.PATHPLANNER, 
 			"zisen").get();
