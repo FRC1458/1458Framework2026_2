@@ -59,7 +59,7 @@ public class Drive extends SubsystemBase {
 		}));
 
 		if (!Robot.isReal()) {
-			drivetrain.resetPose((new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90.0))));
+			//drivetrain.resetPose((new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90.0))));
 		}
 
 		drivetrain.getOdometryThread().setThreadPriority(31);
