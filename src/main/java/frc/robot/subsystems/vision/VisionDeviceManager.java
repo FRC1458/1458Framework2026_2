@@ -35,11 +35,12 @@ public class VisionDeviceManager extends SubsystemBase {
 	private static boolean disable_vision = false;
 
 	public VisionDeviceManager() {
-		leftCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.L_CONSTANTS);
+		// leftCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.L_CONSTANTS);
 		rightCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.R_CONSTANTS);
-		frontCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.F_CONSTANTS);
-		backCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.B_CONSTANTS);
-		cameras = List.of(leftCamera, rightCamera, frontCamera, backCamera);
+		// frontCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.F_CONSTANTS);
+		// backCamera = new VisionDevice(Constants.Limelight.VisionDeviceConstants.B_CONSTANTS);
+		// cameras = List.of(leftCamera, rightCamera, frontCamera, backCamera);
+		cameras = List.of(rightCamera);
 	}
 
 	@Override

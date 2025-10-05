@@ -10,8 +10,11 @@ import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
@@ -34,6 +37,8 @@ public final class Constants {
 	public static final double DT = 0.02;
 	public static final double DEADBAND = 1e-6;
 	public static final double LONG_CANT_TIMEOUT_MS = 0;
+
+	public static final double TAU = Math.PI * 2;
 
 	public static final class Controllers {
 		public static final int DRIVER_CONTROLLER_PORT = 0;
@@ -168,42 +173,49 @@ public final class Constants {
 
 	public static final class Limelight { //TODO: this must be tuned to specific robot
 		public static enum VisionDeviceConstants {
-			L_CONSTANTS (
-				"limelight-left",
-				new Transform2d(
-					new Translation2d(Units.Inches.of(10.5), Units.Inches.of(1.23)),
-					Rotation2d.fromDegrees(-90)),
-				0, 1600, 1200),
+			// L_CONSTANTS (
+			// 	"limelight-left",
+			// 	new Transform2d(
+			// 		new Translation2d(Units.Inches.of(10.5), Units.Inches.of(1.23)),
+			// 		Rotation2d.fromDegrees(-90)),
+			// 	0, 1600, 1200),
 			
+			// R_CONSTANTS (
+			// 	"limelight-right",
+			// 	new Transform2d(
+            //         new Translation2d(Units.Inches.of(10.78), Units.Inches.of(2)),
+            //         Rotation2d.fromDegrees(90)),
+			// 	0, 1600, 1200),
+
+			// F_CONSTANTS (
+			// 	"limelight-front",
+			// 	new Transform2d(
+			// 		new Translation2d(Units.Inches.of(11.11), Units.Inches.of(4.28)),
+			// 		Rotation2d.fromDegrees(0)),
+			// 	0, 1600, 1200),
+
+			// B_CONSTANTS (
+			// 	"limelight-back",
+			// 	new Transform2d(
+			// 		new Translation2d(Units.Inches.of(0), Units.Inches.of(-0.96)),
+			// 		Rotation2d.fromDegrees(180)),
+			// 	0, 1600, 1200);
+
 			R_CONSTANTS (
-				"limelight-right",
-				new Transform2d(
-                    new Translation2d(Units.Inches.of(10.78), Units.Inches.of(2)),
-                    Rotation2d.fromDegrees(90)),
-				0, 1600, 1200),
-
-			F_CONSTANTS (
-				"limelight-front",
-				new Transform2d(
-					new Translation2d(Units.Inches.of(11.11), Units.Inches.of(4.28)),
-					Rotation2d.fromDegrees(0)),
-				0, 1600, 1200),
-
-			B_CONSTANTS (
-				"limelight-back",
-				new Transform2d(
-					new Translation2d(Units.Inches.of(0), Units.Inches.of(-0.96)),
-					Rotation2d.fromDegrees(180)),
-				0, 1600, 1200);
+				"OV9281",  
+				new edu.wpi.first.math.geometry.Transform3d(
+					new Translation3d(0.267, 0.0312, 0.2791),
+					new Rotation3d(TAU/4, -TAU/4, 0)),
+				0, 1280, 800);
 
 			public final String tableName;
-			public final Transform2d robotToCamera;
+			public final Transform3d robotToCamera;
 			public final int cameraId;
 			public final int cameraResolutionWidth;
 			public final int cameraResolutionHeight;
 			private VisionDeviceConstants(
 				String tableName, 
-				Transform2d robotToCamera,
+				Transform3d robotToCamera,
 				int cameraId, 
 				int cameraResolutionWidth,
 				int cameraResolutionHeight
