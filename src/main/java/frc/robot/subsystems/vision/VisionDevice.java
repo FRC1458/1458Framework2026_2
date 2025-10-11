@@ -1,146 +1,81 @@
 package frc.robot.subsystems.vision;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import frc.robot.Constants.Limelight.VisionDeviceConstants;
-
-import frc.robot.RobotState;
-import frc.robot.RobotState.VisionUpdate;
 import frc.robot.lib.localization.FieldLayout;
-import frc.robot.lib.localization.LimelightHelpers;
-import frc.robot.subsystems.drive.Pigeon;
+import frc.robot.subsystems.drive.Drive;
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.numbers.N2;
-import edu.wpi.first.networktables.DoubleArraySubscriber;
-import edu.wpi.first.networktables.IntegerSubscriber;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.networktables.PubSubOption;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
+import frc.robot.Constants.Limelight.VisionDeviceConstants;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import edu.wpi.first.math.Vector;
+import java.util.Optional;
 
+import org.photonvision.EstimatedRobotPose;
+import org.photonvision.PhotonCamera;
+import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.PhotonUtils;
+import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 
-@SuppressWarnings("unused") // TODO: Remove ts
 public class VisionDevice {
 	private final VisionDeviceConstants mConstants;
 	private PeriodicIO mPeriodicIO = new PeriodicIO();
 
-	private NetworkTable mConfigTable;
-	private NetworkTable mOutputTable;
-	private NetworkTable mCalibTable;
-
-	private IntegerSubscriber mVisible;
-	private DoubleArraySubscriber mObservations;
-	private DoubleArraySubscriber mStdDevs;
-	private IntegerSubscriber mFPS;
-	private IntegerSubscriber mID;
-
 	public Field2d robotField;
+	public PhotonCamera mCamera;
+	public PhotonPoseEstimator mPoseEstimator;
 	private boolean inSnapRange;
 	private boolean hasTarget;
+
+	public Pose2d botPose;
 
 	public VisionDevice(VisionDeviceConstants constants) {
 		robotField = new Field2d();
 		SmartDashboard.putData("VisionDevice/" + constants.tableName, robotField);
 
+		mCamera = new PhotonCamera(constants.tableName);
+		mPoseEstimator = new PhotonPoseEstimator(FieldLayout.APRILTAG_MAP, PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR, constants.robotToCamera);
+
 		mConstants = constants;
-		mConfigTable = NetworkTableInstance.getDefault().getTable(mConstants.tableName + "/configs");
-		mCalibTable = NetworkTableInstance.getDefault().getTable(mConstants.tableName + "/calibration");
-		mOutputTable = NetworkTableInstance.getDefault().getTable(mConstants.tableName);
 
-		mVisible = mOutputTable
-				.getIntegerTopic("tv")
-				.subscribe(0, PubSubOption.keepDuplicates(true), PubSubOption.sendAll(true));
-
-		mObservations = mOutputTable
-				.getDoubleArrayTopic("botpose_orb_wpiblue")
-				.subscribe(new double[] {}, PubSubOption.keepDuplicates(true), PubSubOption.sendAll(true));
-
-		mStdDevs = mOutputTable
-				.getDoubleArrayTopic("stddevs")
-				.subscribe(new double[] {}, PubSubOption.keepDuplicates(true), PubSubOption.sendAll(true));
-
-		mFPS = mOutputTable
-				.getIntegerTopic("fps")
-				.subscribe(0, PubSubOption.keepDuplicates(true), PubSubOption.sendAll(true));
-
-		mID = mOutputTable
-				.getIntegerTopic("tid")
-				.subscribe(0, PubSubOption.keepDuplicates(true), PubSubOption.sendAll(true));
-
-		mConfigTable.getDoubleTopic("fiducial_size_m").publish().set(FieldLayout.APRITAG_WIDTH);
-		try {
-			mConfigTable
-					.getStringTopic("tag_layout")
-					.publish()
-					.set(new ObjectMapper().writeValueAsString(FieldLayout.APRILTAG_MAP));
-		} catch (JsonProcessingException e) {
-			throw new RuntimeException("Failed to serialize apriltag layout");
-		}
-
-		mConfigTable.getEntry("camera_exposure").setDouble(mPeriodicIO.camera_exposure);
-		mConfigTable.getEntry("camera_auto_exposure").setDouble(mPeriodicIO.camera_auto_exposure ? 0.0 : 1.0);
-		mConfigTable.getEntry("camera_gain").setDouble(mPeriodicIO.camera_gain);
-	
 		inSnapRange = false;
 		hasTarget = false;
 	}
 
 	private void processFrames() {
-		if (mVisible.get() == 0) {
-			hasTarget = false;
-			return;
+		var result = mCamera.getLatestResult();
+		hasTarget = result.hasTargets();
+
+		if (!hasTarget) {
+			return; 
 		} else {
-			hasTarget = true;
-		}
+			var target = result.getBestTarget();
+			var initBotPose = PhotonUtils.estimateFieldToRobotAprilTag(target.getBestCameraToTarget(), FieldLayout.APRILTAG_MAP.getTagPose(target.getFiducialId()).get(), mConstants.robotToCamera.inverse());
+			var estimatedPose = mPoseEstimator.update(result);
 
-		double[] mt2Pose = mObservations.get();
-		double[] stdDevs = mStdDevs.get();
-		double timestamp = Timer.getFPGATimestamp() * Math.pow(10, 6) - VisionDeviceManager.getTimestampOffset();
+			if (estimatedPose.isEmpty()) botPose = initBotPose.toPose2d();
+			else botPose = estimatedPose.get().estimatedPose.toPose2d();
 
-		if (mt2Pose.length == 0) {
-			hasTarget = false;
-			return;
-		}
+			Drive.getInstance().getCtreDrive().addVisionMeasurement(botPose, result.getTimestampSeconds());
+			mPoseEstimator.setReferencePose(Drive.getInstance().getPose());
 
-		LimelightHelpers.SetRobotOrientation(mConstants.tableName, Pigeon.getInstance().getYaw().getDegrees(), 0, 0, 0, 0, 0);
+			robotField.setRobotPose(botPose);
+			SmartDashboard.putData("VisionDevice/" + mConstants.tableName, robotField);
+		};
 
-		Pose2d botPose = new Pose2d(mt2Pose[0], mt2Pose[1], new Rotation2d(mt2Pose[5] * Math.PI / 180));
-		Vector<N2> stdDevsVec = VecBuilder.fill(stdDevs[6], stdDevs[7]);
+		int[] validIds = { 17, 18, 19, 20, 21, 22, 6, 7, 8, 9, 10, 11 };
 
-		robotField.setRobotPose(botPose);
-		Pose2d targetSpace_pose = LimelightHelpers.toPose2D(LimelightHelpers.getBotPose_TargetSpace(mConstants.tableName));
-		//Vector<N2> betterDevs = VecBuilder.fill(0.005 * targetSpace_pose.getX(), 0.005 * targetSpace_pose.getY());
-
-		RobotState.addVisionUpdate(
-			new VisionUpdate(
-					timestamp,
-					botPose.getTranslation(),
-					new Translation2d(0, 0),
-					stdDevsVec));
-		
-		//Pose2d targetSpace_pose = LimelightHelpers.toPose2D(LimelightHelpers.getBotPose_TargetSpace(mConstants.kTableName));
-		int[] validIds = {17, 18, 19, 20, 21, 22, 6, 7, 8, 9, 10, 11};
-
-		if (
-			targetSpace_pose.getTranslation().getDistance(new Translation2d(0, 0)) < 3 
-			&& MathUtil.inputModulus(targetSpace_pose.getRotation().getDegrees() + 15, -180, 180) < 30
-			&& Arrays.stream(validIds).anyMatch(n->n==(int) mID.get())
-		) {
-			// System.out.println(mID.get());
+		if (result.getBestTarget().getAlternateCameraToTarget().getTranslation().getNorm() < 3
+				&& MathUtil.inputModulus(result.getBestTarget().getAlternateCameraToTarget().getRotation().toRotation2d().getDegrees() + 15, -180, 180) < 30
+				&& Arrays.stream(validIds).anyMatch(n -> n == (int) result.getBestTarget().getFiducialId())) {
 			inSnapRange = true;
 		} else {
-			// System.out.println(MathUtil.inputModulus(mPigeon.getYaw().getDegrees(), -180, 180));
 			inSnapRange = false;
 		}
 	}
@@ -154,8 +89,6 @@ public class VisionDevice {
 	}
 
 	public void periodic() {
-		mPeriodicIO.fps = mFPS.get();
-
 		mPeriodicIO.is_connected = !(Timer.getFPGATimestamp() - mPeriodicIO.latest_timestamp > 1.0);
 
 		processFrames();
@@ -164,10 +97,6 @@ public class VisionDevice {
 				"Vision " + mConstants.tableName + "/Last Update Timestamp Timestamp", mPeriodicIO.latest_timestamp);
 		SmartDashboard.putNumber("Vision " + mConstants.tableName + "/N Queued Updates", mPeriodicIO.frames.size());
 		SmartDashboard.putBoolean("Vision " + mConstants.tableName + "/is Connnected", mPeriodicIO.is_connected);
-	}
-
-	public void captureCalibrationFrame() {
-		mCalibTable.getEntry("wants_frames").setBoolean(true);
 	}
 
 	public boolean isConnected() {
@@ -189,13 +118,6 @@ public class VisionDevice {
 
 	private static class VisionFrame implements Comparable<VisionFrame> {
 		double timestamp;
-		double[] frame_data;
-		double[] stdDevs;
-	
-		// For comparator
-		public double getTimestamp() {
-			return timestamp;
-		}
 
 		@Override
 		public int compareTo(VisionFrame o) {
