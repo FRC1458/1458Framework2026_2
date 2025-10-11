@@ -37,7 +37,7 @@ public final class Constants {
 
 	public static final class Controllers {
 		public static final int DRIVER_CONTROLLER_PORT = 0;
-		public static final double DRIVER_DEADBAND = 0.03;
+		public static final double DRIVER_DEADBAND = 0.07;
 	}
 
 	public static final class Odometry {
@@ -48,9 +48,6 @@ public final class Constants {
 				Math.pow(0.02, 1));
 	}
 
-	public static final class Mover {
-		public static final int driverId = 1234;
-	}
 
 	public static final class Drive {
 		public static final COTSTalonFXSwerveConstants SWERVE_MODULE_TYPE =
@@ -150,20 +147,20 @@ public final class Constants {
 
 	public static final class Auto {
 		public static final PIDFConstants TRANSLATION_CONSTANTS = 
-			new PIDFConstants(3.5, 0.0, 0.0, 1.0);
+			new PIDFConstants(3.5, 0.0, 0.1, 1.0);
 
-		public static final ProfiledPIDFConstants TRANSLATION_CONSTANTS2 = 
-			new ProfiledPIDFConstants(3.5, 0.0, 0.0, 1.0, 
+		public static final ProfiledPIDFConstants PROFILED_TRANSLATION_CONSTANTS = 
+			new ProfiledPIDFConstants(3.5, 0.0, 0.1, 1.0, 
 				new TrapezoidProfile.Constraints(
-					Drive.MAX_SPEED, 
-					Drive.MAX_ACCEL));
+					Drive.MAX_SPEED * 0.7, 
+					Drive.MAX_ACCEL * 0.7));
 
 		public static final ProfiledPIDFConstants ROTATION_CONSTANTS = 
 			new ProfiledPIDFConstants(4.0, 0.0, 0.0, 1.0, 
 				new TrapezoidProfile.Constraints(
 					Drive.MAX_ROTATION_SPEED, 
 					Drive.MAX_ROTATION_ACCEL));
-		public static final double ACCELERATION_CONSTANT = 0;
+		public static final double ACCELERATION_CONSTANT = 0.1;
 	}
 
 	public static final class Limelight { //TODO: this must be tuned to specific robot
