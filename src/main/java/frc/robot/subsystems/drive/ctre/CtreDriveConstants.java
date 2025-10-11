@@ -84,9 +84,9 @@ public class CtreDriveConstants {
     // This may need to be tuned to your individual robot
     private static final double kCoupleRatio = 3.5714285714285716;
 
-    private static final double kDriveGearRatio = 6.122448979591837;
-    private static final double kSteerGearRatio = 21.428571428571427;
-    private static final Distance kWheelRadius = Inches.of(2);
+    public static final double kDriveGearRatio = 6.122448979591837;
+    public static final double kSteerGearRatio = 21.428571428571427;
+    public static final Distance kWheelRadius = Inches.of(2);
 
     private static final boolean kInvertLeftSide = false;
     private static final boolean kInvertRightSide = true;

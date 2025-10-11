@@ -1,6 +1,7 @@
 package frc.robot;
 
 import static edu.wpi.first.units.Units.DegreesPerSecond;
+import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 
@@ -28,7 +29,8 @@ import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.lib.control.ControlConstants.PIDFConstants;
 import frc.robot.lib.control.ControlConstants.ProfiledPIDFConstants;
-import frc.robot.lib.swerve.COTSTalonFXSwerveConstants;
+// import frc.robot.lib.swerve.COTSTalonFXSwerveConstants;
+import frc.robot.subsystems.drive.ctre.CtreDriveConstants;
 
 /**
  * All constants belong here.
@@ -55,13 +57,13 @@ public final class Constants {
 
 
 	public static final class Drive {
-		public static final COTSTalonFXSwerveConstants SWERVE_MODULE_TYPE =
-			COTSTalonFXSwerveConstants.SDS.MK4i.KrakenX60(COTSTalonFXSwerveConstants.SDS.MK4i.driveRatios.L3);
+		// public static final COTSTalonFXSwerveConstants SWERVE_MODULE_TYPE =
+		// 	COTSTalonFXSwerveConstants.SDS.MK4i.KrakenX60(COTSTalonFXSwerveConstants.SDS.MK4i.driveRatios.L3);
 
         public static final double TRACK_WIDTH = Units.Inches.of(24).in(Units.Meters);
         public static final double WHEEL_BASE =	Units.Inches.of(24).in(Units.Meters);
-        public static final double WHEEL_CIRCUMFERENCE = SWERVE_MODULE_TYPE.wheelCircumference;
-        public static final double WHEEL_DIAMETER = SWERVE_MODULE_TYPE.wheelDiameter; 
+        public static final double WHEEL_DIAMETER = 2 * CtreDriveConstants.kWheelRadius.in(Meters);//SWERVE_MODULE_TYPE.wheelDiameter; 
+        public static final double WHEEL_CIRCUMFERENCE = WHEEL_DIAMETER*Math.PI;//SWERVE_MODULE_TYPE.wheelCircumference;		
 
         public static final Translation2d[] MODULE_LOCATIONS = {
             new Translation2d(-WHEEL_BASE / 2.0, TRACK_WIDTH / 2.0),
@@ -70,8 +72,8 @@ public final class Constants {
             new Translation2d(WHEEL_BASE / 2.0, -TRACK_WIDTH / 2.0)
         };	
 		
-		public static final double DRIVE_GEAR_RATIO = SWERVE_MODULE_TYPE.driveGearRatio;
-        public static final double ANGLE_GEAR_RATIO = SWERVE_MODULE_TYPE.angleGearRatio;
+		public static final double DRIVE_GEAR_RATIO = CtreDriveConstants.kDriveGearRatio;//SWERVE_MODULE_TYPE.driveGearRatio;
+        public static final double ANGLE_GEAR_RATIO = CtreDriveConstants.kSteerGearRatio;//SWERVE_MODULE_TYPE.angleGearRatio;
 
 		public static final double MAX_SPEED = 5.0;
 		public static final double MAX_ACCEL = 5.0;
