@@ -7,8 +7,6 @@ import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
@@ -29,21 +27,21 @@ import frc.robot.subsystems.drive.ctre.CtreDriveConstants;
 import frc.robot.subsystems.drive.ctre.CtreDrive;
 import frc.robot.subsystems.drive.ctre.CtreDriveTelemetry;
 
-import java.util.function.UnaryOperator;
-
 public class Drive extends SubsystemBase {
-	private static Drive drive2Instance;
+	private static Drive driveInstance;
     public static Drive getInstance() {
-        if (drive2Instance == null) {
-            drive2Instance = new Drive();
+        if (driveInstance == null) {
+            driveInstance = new Drive();
         }
-        return drive2Instance;
+        return driveInstance;
     }
 
 	private SwerveDriveState lastReadState;
-	private SwerveRequest driveRequest =
+    public static final SwerveRequest.FieldCentric teleopRequest =
         new SwerveRequest.FieldCentric().withDriveRequestType(DriveRequestType.OpenLoopVoltage);
-	private final CtreDrive drivetrain = CtreDriveConstants.createDrivetrain();
+	public SwerveRequest driveRequest = teleopRequest;
+
+    private final CtreDrive drivetrain = CtreDriveConstants.createDrivetrain();    
 	private final CtreDriveTelemetry telemetry = new CtreDriveTelemetry(Constants.Drive.MAX_SPEED);
     // Citrus what are you doing
 	private Time lastPoseResetTime = BaseUnits.TimeUnit.of(0.0);
@@ -57,7 +55,7 @@ public class Drive extends SubsystemBase {
 		}));
 
 		if (!Robot.isReal()) {
-			drivetrain.resetPose((new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90.0))));
+			// drivetrain.resetPose((new Pose2d(new Translation2d(), Rotation2d.fromDegrees(90.0))));
 		}
 
 		drivetrain.getOdometryThread().setThreadPriority(31);
@@ -81,34 +79,57 @@ public class Drive extends SubsystemBase {
 		SmartDashboard.putData("Elastic Field 2D", elasticPose);
 	}
 
+    /**
+     * @return the current state
+     */
 	public SwerveDriveState getState() {
 		return drivetrain.getState();
 	}
 
+    /**
+     * @return the last read pose
+     */
 	public Pose2d getPose() {
 		return lastReadState.Pose;
 	}
 
-	public void setSwerveRequest(SwerveRequest request) {
-		driveRequest = request;
+    public ChassisSpeeds getFieldSpeeds() {
+        return ChassisSpeeds.fromRobotRelativeSpeeds(lastReadState.Speeds, lastReadState.Pose.getRotation());
+    }
+	
+    /**
+     * Switches the swerve request
+     * <p>Please do not the new swerve request every 20 ms</p>
+     */
+    public void setSwerveRequest(SwerveRequest request) {
+	 	driveRequest = request;
 	}
 
-	public Command followSwerveRequestCommand(
-			SwerveRequest.FieldCentric request, UnaryOperator<SwerveRequest.FieldCentric> updater) {
-		return run(() -> setSwerveRequest(updater.apply(request)))
-            .handleInterrupt(() -> setSwerveRequest(new SwerveRequest.FieldCentric()));
+    public SwerveRequest getSwerveRequest() {
+		return driveRequest; 
 	}
 
     public Command teleopCommand() {
-        return run(() -> {
-            setSwerveRequest(new SwerveRequest.FieldCentric()
-                .withVelocityX(
-                    Util.deadBand(-Robot.controller.getLeftY(), Constants.Controllers.DRIVER_DEADBAND) * Constants.Drive.MAX_SPEED)
-                .withVelocityY(
-                    Util.deadBand(Robot.controller.getLeftX(), Constants.Controllers.DRIVER_DEADBAND) * Constants.Drive.MAX_SPEED)
-                .withRotationalRate(
-                    Util.deadBand(Robot.controller.getRightX(), Constants.Controllers.DRIVER_DEADBAND) * Constants.Drive.MAX_ROTATION_SPEED));
-        });
+        return runOnce(() -> {
+            teleopRequest.withVelocityX(0).withVelocityY(0).withRotationalRate(0);
+            setSwerveRequest(teleopRequest);
+        }).andThen(run(() -> {
+            double xDesiredRaw = Robot.controller.getLeftY();
+            double yDesiredRaw = Robot.controller.getLeftX();
+            double rotDesiredRaw = Robot.controller.getRightX();
+            double xFancy = Util.applyJoystickDeadband(xDesiredRaw, Constants.Controllers.DRIVER_DEADBAND);
+            double yFancy = Util.applyJoystickDeadband(yDesiredRaw, Constants.Controllers.DRIVER_DEADBAND);
+            double rotFancy = Util.applyJoystickDeadband(rotDesiredRaw, Constants.Controllers.DRIVER_DEADBAND);
+
+            SmartDashboard.putNumber("Sticks/vX", xDesiredRaw);
+            SmartDashboard.putNumber("Sticks/vY", yDesiredRaw);
+            SmartDashboard.putNumber("Sticks/vW", rotDesiredRaw);
+
+            teleopRequest
+                .withVelocityX(xFancy * Constants.Drive.MAX_SPEED)
+                .withVelocityY(yFancy * Constants.Drive.MAX_SPEED)
+                .withRotationalRate(rotFancy * Constants.Drive.MAX_ROTATION_SPEED);        
+        }).handleInterrupt(() -> setSwerveRequest(new SwerveRequest.FieldCentric()))).withName("Teleop");
     }
 
 	public void addVisionUpdate(Pose2d pose, Time timestamp) {

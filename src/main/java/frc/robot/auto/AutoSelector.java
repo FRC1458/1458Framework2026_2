@@ -1,5 +1,6 @@
 package frc.robot.auto;
 
+import java.lang.reflect.Method;
 import java.util.function.Supplier;
 
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -13,11 +14,21 @@ public class AutoSelector {
     private final SendableChooser<Supplier<Command>> chooser = new SendableChooser<>();
 
     public AutoSelector() {
+        Method[] autos = AutoRoutines.class.getMethods();
+        for (Method auto : autos) {
+            var name = auto.getName();
+            if (auto.getReturnType().equals(Command.class)) {
+                chooser.addOption(name, () -> {
+                    try{
+                        return (Command) auto.invoke(null);
+                    } catch (Exception e) {
+                        return null;
+                    }});
+                // System.out.println(name);
+            }
+        }
+
         chooser.setDefaultOption("None", () -> null);
-        chooser.addOption("SnapTest", () -> AutoRoutines.testSnap());
-        chooser.addOption("TrajectoryTest", () -> AutoRoutines.testTrajectoryAuto());
-        chooser.addOption("TrajectoryTestOld", () -> AutoRoutines.driveAuto());
-        chooser.addOption("AutopilotTestOld", () -> AutoRoutines.autopilotAuto());
         SmartDashboard.putData(chooser);
     }
 

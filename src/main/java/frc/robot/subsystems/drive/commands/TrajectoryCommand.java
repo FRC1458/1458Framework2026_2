@@ -26,6 +26,9 @@ import frc.robot.subsystems.drive.Drive;
 public class TrajectoryCommand extends Command {
     public final Drive drive;
 
+    private final SwerveRequest.ApplyFieldSpeeds request = 
+        new SwerveRequest.ApplyFieldSpeeds();
+
     private final PIDVController xController;
     private final PIDVController yController;
     private final ProfiledPIDVController thetaController;
@@ -74,18 +77,20 @@ public class TrajectoryCommand extends Command {
     @Override
     public void initialize() {
         timer.start();
+        drive.setSwerveRequest(request);
     }
 
     @Override
     public void execute() {
         setRobotState(
-            RobotState.getLatestFieldToVehicle(), RobotState.getSmoothedVelocity());
-        drive.setSwerveRequest(new SwerveRequest.ApplyFieldSpeeds().withSpeeds(calculateSpeeds()));
+            drive.getPose(), drive.getFieldSpeeds());
+        // updates the request
+        request.withSpeeds(calculateSpeeds());
     }
 
-    public void setRobotState(Pose2d pose, Twist2d speeds) {
+    public void setRobotState(Pose2d pose, ChassisSpeeds speeds) {
         this.currentPose = pose;
-        this.currentSpeeds = new ChassisSpeeds(speeds.dx, speeds.dy, speeds.dtheta);
+        this.currentSpeeds = speeds;
     }
 
     public ChassisSpeeds calculateSpeeds() {
@@ -134,11 +139,10 @@ public class TrajectoryCommand extends Command {
         field.setRobotPose(targetState.pose);
 		SmartDashboard.putData("debug", field);
 
-        return ChassisSpeeds.fromFieldRelativeSpeeds(
+        return new ChassisSpeeds(
             vx + xAccelFF * accelConstant,
             vy + yAccelFF * accelConstant,
-            rotation,
-            currentPose.getRotation());
+            rotation);
     }
 
     @Override
@@ -151,6 +155,11 @@ public class TrajectoryCommand extends Command {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void end(boolean interrupted) {
+        drive.setSwerveRequest(new SwerveRequest.FieldCentric());
     }
 
     public RedTrajectory getTrajectory() {
