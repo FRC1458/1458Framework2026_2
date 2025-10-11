@@ -40,8 +40,8 @@ public class Robot extends TimedRobot {
 			
 		}
 		
-		RobotState.reset(Timer.getFPGATimestamp(), new Pose2d());
-		RobotState.resetKalman();
+		// RobotState.reset(Timer.getFPGATimestamp(), new Pose2d());
+		// RobotState.resetKalman();
 
 		Drive.getInstance();
 		VisionDeviceManager.getInstance();
@@ -81,7 +81,7 @@ public class Robot extends TimedRobot {
 	/** This autonomous runs the autonomous command selected. */
 	@Override
 	public void autonomousInit() {
-		RobotState.setAlliance(DriverStation.getAlliance());
+		// RobotState.setAlliance(DriverStation.getAlliance());
 		autoCommand = autoChooser.getAuto();
 
 		if (autoCommand != null) {

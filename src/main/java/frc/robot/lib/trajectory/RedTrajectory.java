@@ -7,9 +7,10 @@ import choreo.trajectory.Trajectory;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import frc.robot.Constants;
-import frc.robot.RobotState;
+// import frc.robot.RobotState;
 import frc.robot.lib.localization.FieldUtil;
 
 public class RedTrajectory {
@@ -155,7 +156,7 @@ public class RedTrajectory {
     public RedTrajectory(Trajectory<SwerveSample> traj, boolean flipForAlliance) {
         choreoTrajectory = traj;
         this.type = TrajectoryType.CHOREO;        
-        this.flipped = flipForAlliance && RobotState.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
+        this.flipped = flipForAlliance && DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;//RobotState.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
         this.name = "ChoreoTrajectory#" + traj.name();
     }
 
@@ -167,7 +168,7 @@ public class RedTrajectory {
     public RedTrajectory(PathPlannerTrajectory traj, boolean flipForAlliance) {
         pathplannerTrajectory = traj;
         this.type = TrajectoryType.PATHPLANNER;
-        this.flipped = flipForAlliance && RobotState.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
+        this.flipped = flipForAlliance && DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;//RobotState.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
         this.name = "PathPlannerTrajectory#" + traj.hashCode();
     }
 
@@ -179,7 +180,7 @@ public class RedTrajectory {
     public RedTrajectory(PathPlannerTrajectory traj, boolean flipForAlliance, String name) {
         pathplannerTrajectory = traj;
         this.type = TrajectoryType.PATHPLANNER;
-        this.flipped = flipForAlliance && RobotState.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
+        this.flipped = flipForAlliance && DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;//RobotState.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
         this.name = "PathPlannerTrajectory#" + name;
     }
 
